@@ -75,4 +75,17 @@ export class MusicBrainzClient {
 
     return data.artists[0]?.id ?? null;
   }
+
+  async searchRelease(
+    artistName: string,
+    albumName: string
+  ): Promise<string | null> {
+    const data = await this.fetch<{
+      "release-groups": Array<{ id: string; score: number }>;
+    }>("/release-group", {
+      query: `artist:"${artistName}" AND releasegroup:"${albumName}"`,
+    });
+
+    return data["release-groups"][0]?.id ?? null;
+  }
 }

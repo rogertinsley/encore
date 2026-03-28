@@ -21,19 +21,47 @@ function stripBio(raw: string): string {
     : stripped;
 }
 
+async function resolveAlbumArt(
+  track: NowPlayingTrack,
+  musicBrainz: Pick<MusicBrainzClient, "searchRelease">,
+  coverArt: Pick<
+    CoverArtArchiveClient,
+    "getAlbumArt" | "getAlbumArtByReleaseGroup"
+  >
+): Promise<string | null> {
+  // Try Last.FM album MBID first (direct release lookup)
+  if (track.albumMbid) {
+    const art = await coverArt.getAlbumArt(track.albumMbid).catch(() => null);
+    if (art) return art;
+  }
+
+  // Fallback: search MusicBrainz by artist + album name → release-group MBID
+  if (track.albumName) {
+    const rgMbid = await musicBrainz
+      .searchRelease(track.artistName, track.albumName)
+      .catch(() => null);
+    if (rgMbid) {
+      return coverArt.getAlbumArtByReleaseGroup(rgMbid).catch(() => null);
+    }
+  }
+
+  return null;
+}
+
 export async function enrichNowPlaying(
   track: NowPlayingTrack,
   lastfm: Pick<LastFMClient, "getArtistInfo">,
-  musicBrainz: Pick<MusicBrainzClient, "searchArtist">,
+  musicBrainz: Pick<MusicBrainzClient, "searchArtist" | "searchRelease">,
   fanartTV: Pick<FanartTVClient, "getArtistImages">,
-  coverArt: Pick<CoverArtArchiveClient, "getAlbumArt">
+  coverArt: Pick<
+    CoverArtArchiveClient,
+    "getAlbumArt" | "getAlbumArtByReleaseGroup"
+  >
 ): Promise<EnrichedNowPlaying> {
   const [artistInfo, mbid, albumArtUrl] = await Promise.all([
     lastfm.getArtistInfo(track.artistName).catch(() => null),
     musicBrainz.searchArtist(track.artistName).catch(() => null),
-    track.albumMbid
-      ? coverArt.getAlbumArt(track.albumMbid).catch(() => null)
-      : Promise.resolve(null),
+    resolveAlbumArt(track, musicBrainz, coverArt),
   ]);
 
   const artistImages = mbid

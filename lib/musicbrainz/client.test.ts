@@ -134,4 +134,27 @@ describe("MusicBrainzClient", () => {
       expect(mbid).toBe("a74b1b7f-71a5-4011-9441-d0b5e4122711");
     });
   });
+
+  describe("searchRelease", () => {
+    it("returns release-group MBID for matching artist and album", async () => {
+      mockFetch({
+        "release-groups": [
+          { id: "rg-ok-computer", score: 100 },
+          { id: "rg-other", score: 60 },
+        ],
+      });
+
+      const mbid = await client.searchRelease("Radiohead", "OK Computer");
+
+      expect(mbid).toBe("rg-ok-computer");
+    });
+
+    it("returns null when no release-groups are found", async () => {
+      mockFetch({ "release-groups": [] });
+
+      const mbid = await client.searchRelease("Unknown", "Unknown Album");
+
+      expect(mbid).toBeNull();
+    });
+  });
 });
