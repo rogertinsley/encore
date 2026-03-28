@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { redis } from "@/lib/redis";
 import { clients } from "@/lib/clients";
 
-const CACHE_TTL = 24 * 60 * 60;
+const CACHE_TTL = 14 * 24 * 60 * 60; // 2 weeks
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
