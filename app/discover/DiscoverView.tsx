@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import type { ArtistImages } from "@/lib/fanart/client";
 
 interface NewRelease {
   id: string;
@@ -19,7 +20,6 @@ interface Recommendation {
   artistName: string;
   sourceArtist: string;
   tags: string[];
-  thumbnail: string | null;
 }
 
 interface RecentTrack {
@@ -116,7 +116,16 @@ function NewReleasesSection({ releases }: { releases: NewRelease[] }) {
 // ── Recommended Artists ───────────────────────────────────────────────────────
 
 function ArtistCard({ rec }: { rec: Recommendation }) {
-  const thumbnail = rec.thumbnail;
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/artist-image?name=${encodeURIComponent(rec.artistName)}`)
+      .then((r) => r.json())
+      .then((images: ArtistImages | null) =>
+        setThumbnail(images?.thumbnail ?? null)
+      )
+      .catch(() => null);
+  }, [rec.artistName]);
 
   return (
     <Link
