@@ -6,11 +6,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-FROM base AS prod-deps
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
+FROM deps AS prod-deps
+RUN npm prune --omit=dev
 
 FROM base AS builder
 WORKDIR /app
