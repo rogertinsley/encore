@@ -23,7 +23,7 @@ export function Nav() {
     >
       <nav className="max-w-4xl mx-auto flex items-center gap-8">
         <span className="text-white font-semibold text-sm tracking-wide">
-          Music
+          Encore
         </span>
         <div className="flex items-center gap-6">
           {links.map(({ href, label }) => (

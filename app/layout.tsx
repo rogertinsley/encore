@@ -3,8 +3,8 @@ import { Nav } from "./components/Nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Music Recommender",
-  description: "Personal music discovery powered by Last.FM",
+  title: "Encore",
+  description: "Personal music discovery",
 };
 
 export default function RootLayout({
