@@ -18,7 +18,13 @@ export function triggerImmediatePoll(): void {
 }
 
 export function startNowPlayingPoller(): void {
-  const { lastfm, musicBrainz, fanartTV, coverArt, eversolo } = clients;
+  const {
+    lastfm,
+    musicBrainzEnrichment: musicBrainz,
+    fanartTV,
+    coverArt,
+    eversolo,
+  } = clients;
 
   let cachedKey: string | null = null;
   let cachedEnrichment: Awaited<ReturnType<typeof enrichNowPlaying>> | null =

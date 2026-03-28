@@ -5,6 +5,7 @@ vi.mock("@/lib/clients", () => ({
     eversolo: { getState: vi.fn() },
     lastfm: { getArtistInfo: vi.fn() },
     musicBrainz: { searchArtist: vi.fn(), searchRelease: vi.fn() },
+    musicBrainzEnrichment: { searchArtist: vi.fn(), searchRelease: vi.fn() },
     fanartTV: { getArtistImages: vi.fn() },
     coverArt: { getAlbumArt: vi.fn(), getAlbumArtByReleaseGroup: vi.fn() },
   },
@@ -20,7 +21,7 @@ import { startNowPlayingPoller, NOW_PLAYING_KEY } from "./now-playing";
 
 const eversolo = clients.eversolo as Record<string, ReturnType<typeof vi.fn>>;
 const lastfm = clients.lastfm as Record<string, ReturnType<typeof vi.fn>>;
-const musicBrainz = clients.musicBrainz as Record<
+const musicBrainz = clients.musicBrainzEnrichment as Record<
   string,
   ReturnType<typeof vi.fn>
 >;
