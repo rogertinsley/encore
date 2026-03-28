@@ -37,7 +37,7 @@ export async function GET(
     await Promise.all([
       lastfm.getArtistInfo(artistName, username).catch(() => null),
       lastfm.getTopTracks(artistName, 10).catch(() => []),
-      lastfm.getTopAlbums(artistName, 6).catch(() => []),
+      lastfm.getTopAlbums(artistName, 12).catch(() => []),
       lastfm.getSimilarArtists(artistName).catch(() => []),
       musicBrainz.searchArtist(artistName).catch(() => null),
     ]);
