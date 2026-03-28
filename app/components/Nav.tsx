@@ -11,9 +11,16 @@ const links = [
 
 export function Nav() {
   const pathname = usePathname();
+  const isNowPlaying = pathname === "/now-playing";
 
   return (
-    <header className="border-b border-zinc-800 px-6 py-4">
+    <header
+      className={
+        isNowPlaying
+          ? "fixed top-0 left-0 right-0 z-20 px-6 py-4"
+          : "border-b border-zinc-800 px-6 py-4"
+      }
+    >
       <nav className="max-w-4xl mx-auto flex items-center gap-8">
         <span className="text-white font-semibold text-sm tracking-wide">
           Music
@@ -26,7 +33,9 @@ export function Nav() {
               className={`text-sm transition-colors ${
                 pathname === href
                   ? "text-white font-medium"
-                  : "text-zinc-500 hover:text-zinc-300"
+                  : isNowPlaying
+                    ? "text-white/60 hover:text-white"
+                    : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               {label}

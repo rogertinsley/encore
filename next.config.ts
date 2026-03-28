@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
       { hostname: "coverartarchive.org" },
       { hostname: "*.coverartarchive.org" },
       { hostname: "*.archive.org" },
+      { protocol: "https", hostname: "*.mzstatic.com" },
     ],
   },
 };

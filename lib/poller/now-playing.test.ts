@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/clients", () => ({
   clients: {
-    lastfm: { getNowPlaying: vi.fn(), getArtistInfo: vi.fn() },
+    eversolo: { getState: vi.fn() },
+    lastfm: { getArtistInfo: vi.fn() },
     musicBrainz: { searchArtist: vi.fn(), searchRelease: vi.fn() },
     fanartTV: { getArtistImages: vi.fn() },
     coverArt: { getAlbumArt: vi.fn(), getAlbumArtByReleaseGroup: vi.fn() },
@@ -17,6 +18,7 @@ import { clients } from "@/lib/clients";
 import { redis } from "@/lib/redis";
 import { startNowPlayingPoller, NOW_PLAYING_KEY } from "./now-playing";
 
+const eversolo = clients.eversolo as Record<string, ReturnType<typeof vi.fn>>;
 const lastfm = clients.lastfm as Record<string, ReturnType<typeof vi.fn>>;
 const musicBrainz = clients.musicBrainz as Record<
   string,
@@ -33,7 +35,7 @@ beforeEach(() => {
 
 describe("startNowPlayingPoller", () => {
   it("deletes the Redis key when nothing is playing", async () => {
-    lastfm.getNowPlaying.mockResolvedValue(null);
+    eversolo.getState.mockResolvedValue({ track: null, playState: "idle" });
 
     startNowPlayingPoller();
     await vi.waitFor(() => expect(redisMock.del).toHaveBeenCalled());
@@ -43,11 +45,15 @@ describe("startNowPlayingPoller", () => {
   });
 
   it("stores enriched track in Redis when a song is playing", async () => {
-    lastfm.getNowPlaying.mockResolvedValue({
-      trackName: "Creep",
-      artistName: "Radiohead",
-      albumName: "Pablo Honey",
-      albumMbid: null,
+    eversolo.getState.mockResolvedValue({
+      track: {
+        title: "Creep",
+        artist: "Radiohead",
+        album: "Pablo Honey",
+        durationMs: 238000,
+        positionMs: 42000,
+      },
+      playState: "playing",
     });
     lastfm.getArtistInfo.mockResolvedValue({
       bio: "Radiohead are a band.",
@@ -66,8 +72,11 @@ describe("startNowPlayingPoller", () => {
     const [key, ttl, json] = redisMock.setex.mock.calls[0];
     const stored = JSON.parse(json);
     expect(key).toBe(NOW_PLAYING_KEY);
-    expect(ttl).toBe(60);
+    expect(ttl).toBe(30);
     expect(stored.trackName).toBe("Creep");
     expect(stored.artistName).toBe("Radiohead");
+    expect(stored.positionMs).toBe(42000);
+    expect(stored.durationMs).toBe(238000);
+    expect(stored.playState).toBe("playing");
   });
 });

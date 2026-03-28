@@ -3,11 +3,15 @@ import type { LastFMClient } from "@/lib/lastfm/client";
 import type { MusicBrainzClient } from "@/lib/musicbrainz/client";
 import type { FanartTVClient, ArtistImages } from "@/lib/fanart/client";
 import type { CoverArtArchiveClient } from "@/lib/coverart/client";
+import type { PlayState } from "@/lib/eversolo/client";
 
 export interface EnrichedNowPlaying extends NowPlayingTrack {
   artistImages: ArtistImages | null;
   albumArtUrl: string | null;
   bio: string | null;
+  positionMs: number;
+  durationMs: number;
+  playState: PlayState;
 }
 
 function stripBio(raw: string): string {
@@ -57,7 +61,9 @@ export async function enrichNowPlaying(
     CoverArtArchiveClient,
     "getAlbumArt" | "getAlbumArtByReleaseGroup"
   >
-): Promise<EnrichedNowPlaying> {
+): Promise<
+  Omit<EnrichedNowPlaying, "positionMs" | "durationMs" | "playState">
+> {
   const [artistInfo, mbid, albumArtUrl] = await Promise.all([
     lastfm.getArtistInfo(track.artistName).catch(() => null),
     musicBrainz.searchArtist(track.artistName).catch(() => null),

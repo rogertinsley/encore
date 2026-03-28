@@ -52,6 +52,7 @@ export class NewReleasesService {
     if (!mbid) return [];
 
     const releases = await this.musicBrainz.getRecentReleases(mbid, since);
+    console.log(`[NewReleases] ${artist.name}: ${releases.length} release(s)`);
     return releases.map((r: Release) => ({
       artistName: artist.name,
       title: r.title,

@@ -50,7 +50,11 @@ export class MusicBrainzClient {
           "first-release-date": string;
           "primary-type": string;
         }>;
-      }>("/release-group", { artist: mbid, type: "album|single|ep" });
+      }>("/release-group", {
+        artist: mbid,
+        type: "album|single|ep",
+        limit: "100",
+      });
 
       return data["release-groups"]
         .filter((rg) => {
