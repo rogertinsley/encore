@@ -57,6 +57,26 @@ export interface TopAlbum {
   imageUrl: string | null;
 }
 
+export interface UserTopTrack {
+  name: string;
+  artistName: string;
+  playCount: number;
+  rank: number;
+}
+
+export interface UserTopAlbum {
+  name: string;
+  artistName: string;
+  playCount: number;
+  rank: number;
+  imageUrl: string | null;
+}
+
+export interface UserInfo {
+  totalScrobbles: number;
+  registeredAt: Date;
+}
+
 export interface RecentTrack {
   trackName: string;
   artistName: string;

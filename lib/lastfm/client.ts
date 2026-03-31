@@ -8,6 +8,9 @@ export type {
   TopTrack,
   TopAlbum,
   RecentTrack,
+  UserTopTrack,
+  UserTopAlbum,
+  UserInfo,
   Period,
 } from "./types";
 import type {
@@ -20,6 +23,9 @@ import type {
   TopTrack,
   TopAlbum,
   RecentTrack,
+  UserTopTrack,
+  UserTopAlbum,
+  UserInfo,
   Period,
 } from "./types";
 
@@ -223,6 +229,89 @@ export class LastFMClient {
           scrobbledAt: new Date(parseInt(t.date!.uts, 10) * 1000),
         };
       });
+  }
+
+  async getUserTopTracks(
+    username: string,
+    period: Period,
+    limit = 20
+  ): Promise<UserTopTrack[]> {
+    const data = await this.fetch<{
+      toptracks: {
+        track: Array<{
+          name: string;
+          playcount: string;
+          artist: { name: string };
+          "@attr": { rank: string };
+        }>;
+      };
+    }>({
+      method: "user.getTopTracks",
+      user: username,
+      period,
+      limit: String(limit),
+    });
+
+    return data.toptracks.track.map((t) => ({
+      name: t.name,
+      artistName: t.artist.name,
+      playCount: parseInt(t.playcount, 10),
+      rank: parseInt(t["@attr"].rank, 10),
+    }));
+  }
+
+  async getUserTopAlbums(
+    username: string,
+    period: Period,
+    limit = 12
+  ): Promise<UserTopAlbum[]> {
+    const PLACEHOLDER = "2a96cbd8b46e442fc41c2b86b821562f";
+    const data = await this.fetch<{
+      topalbums: {
+        album: Array<{
+          name: string;
+          playcount: string;
+          artist: { name: string };
+          image: Array<{ "#text": string; size: string }>;
+          "@attr": { rank: string };
+        }>;
+      };
+    }>({
+      method: "user.getTopAlbums",
+      user: username,
+      period,
+      limit: String(limit),
+    });
+
+    return data.topalbums.album.map((a) => {
+      const img =
+        a.image?.find((i) => i.size === "extralarge") ??
+        a.image?.find((i) => i.size === "large");
+      const imageUrl =
+        img?.["#text"] && !img["#text"].includes(PLACEHOLDER)
+          ? img["#text"]
+          : null;
+      return {
+        name: a.name,
+        artistName: a.artist.name,
+        playCount: parseInt(a.playcount, 10),
+        rank: parseInt(a["@attr"].rank, 10),
+        imageUrl,
+      };
+    });
+  }
+
+  async getUserInfo(username: string): Promise<UserInfo> {
+    const data = await this.fetch<{
+      user: { playcount: string; registered: { unixtime: string } };
+    }>({ method: "user.getInfo", user: username });
+
+    return {
+      totalScrobbles: parseInt(data.user.playcount, 10),
+      registeredAt: new Date(
+        parseInt(data.user.registered.unixtime, 10) * 1000
+      ),
+    };
   }
 
   async getNowPlaying(username: string): Promise<NowPlayingTrack | null> {
