@@ -38,6 +38,49 @@ export interface PlayQueue {
   total: number;
 }
 
+// Typed shapes for the two firmware response paths
+
+interface ZidooPlayingMusic {
+  title?: string;
+  artist?: string;
+  album?: string;
+  extension?: string;
+  sampleRate?: string;
+  bits?: string;
+  channels?: number;
+  albumArtBig?: string;
+  albumArt?: string;
+}
+
+interface ZidooAudioInfo {
+  songName?: string;
+  artistName?: string;
+  albumName?: string;
+  albumArt?: string;
+}
+
+interface ZidooStateResponse {
+  state?: number;
+  duration?: number;
+  position?: number;
+  playingMusic?: ZidooPlayingMusic;
+  everSoloPlayInfo?: { everSoloPlayAudioInfo?: ZidooAudioInfo };
+}
+
+interface ZidooQueueItem {
+  id: number;
+  title?: string;
+  artist?: string;
+  album?: string;
+  duration?: number;
+  active?: boolean;
+}
+
+interface ZidooQueueResponse {
+  array?: ZidooQueueItem[];
+  total?: number;
+}
+
 export class EversoloClient {
   private baseUrl: string;
 
@@ -48,8 +91,7 @@ export class EversoloClient {
   async getState(): Promise<EversoloState> {
     const res = await fetch(`${this.baseUrl}/ZidooMusicControl/v2/getState`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = (await res.json()) as any;
+    const data = (await res.json()) as ZidooStateResponse;
 
     const raw: number = data.state ?? 0;
     const playState: PlayState =
@@ -102,14 +144,12 @@ export class EversoloClient {
         `${this.baseUrl}/ZidooMusicControl/v2/getPlayQueue`
       );
       if (!res.ok) return { tracks: [], total: 0 };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = (await res.json()) as any;
+      const data = (await res.json()) as ZidooQueueResponse;
       if (!Array.isArray(data.array)) return { tracks: [], total: 0 };
       return {
         total: data.total ?? data.array.length,
         tracks: data.array.map(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (t: any): QueueTrack => ({
+          (t): QueueTrack => ({
             id: t.id,
             title: t.title ?? "",
             artist: t.artist ?? "",

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { clients } from "@/lib/clients";
-import { filterPlaceholder } from "@/lib/lastfm/utils";
+import { normalizeTrack } from "@/lib/lastfm/transforms";
 
 export async function GET() {
   try {
@@ -8,13 +8,7 @@ export async function GET() {
       process.env.LASTFM_USERNAME ?? "",
       50
     );
-    return NextResponse.json(
-      tracks.map((t) => ({
-        ...t,
-        albumArtUrl: filterPlaceholder(t.albumArtUrl),
-        scrobbledAt: t.scrobbledAt?.toISOString() ?? null,
-      }))
-    );
+    return NextResponse.json(tracks.map(normalizeTrack));
   } catch {
     return NextResponse.json([]);
   }

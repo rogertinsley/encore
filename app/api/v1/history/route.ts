@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { clients } from "@/lib/clients";
-import { LASTFM_PLACEHOLDER } from "@/lib/lastfm/constants";
+import { normalizeTrack } from "@/lib/lastfm/transforms";
 
 export async function GET() {
   try {
@@ -8,15 +8,7 @@ export async function GET() {
       process.env.LASTFM_USERNAME ?? "",
       50
     );
-    return NextResponse.json(
-      tracks.map((t) => ({
-        ...t,
-        albumArtUrl: t.albumArtUrl?.includes(LASTFM_PLACEHOLDER)
-          ? null
-          : t.albumArtUrl,
-        scrobbledAt: t.scrobbledAt?.toISOString() ?? null,
-      }))
-    );
+    return NextResponse.json(tracks.map(normalizeTrack));
   } catch {
     return NextResponse.json([]);
   }

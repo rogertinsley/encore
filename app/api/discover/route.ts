@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { clients } from "@/lib/clients";
-import { filterPlaceholder } from "@/lib/lastfm/utils";
+import { normalizeTrack } from "@/lib/lastfm/transforms";
 
 export async function GET() {
   const [releases, recommendations, recentTracks] = await Promise.allSettled([
@@ -22,11 +22,7 @@ export async function GET() {
       recommendations.status === "fulfilled" ? recommendations.value : [],
     recentTracks:
       recentTracks.status === "fulfilled"
-        ? recentTracks.value.map((t) => ({
-            ...t,
-            albumArtUrl: filterPlaceholder(t.albumArtUrl),
-            scrobbledAt: t.scrobbledAt?.toISOString() ?? null,
-          }))
+        ? recentTracks.value.map(normalizeTrack)
         : [],
   });
 }
