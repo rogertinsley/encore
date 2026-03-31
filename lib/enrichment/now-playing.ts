@@ -60,7 +60,10 @@ export async function enrichNowPlaying(
     "getAlbumArt" | "getAlbumArtByReleaseGroup"
   >
 ): Promise<
-  Omit<EnrichedNowPlaying, "positionMs" | "durationMs" | "playState">
+  Omit<
+    EnrichedNowPlaying,
+    "positionMs" | "durationMs" | "playState" | "audioFormat"
+  >
 > {
   const [artistInfo, mbid, albumArtUrl] = await Promise.all([
     lastfm.getArtistInfo(track.artistName).catch(() => null),

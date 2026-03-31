@@ -6,7 +6,6 @@ import {
   generateWeeklyDigest,
   generateAlbumReview,
   generateArtistSpotlight,
-  type EditorialContent,
 } from "@/lib/ai/editorial";
 import { LASTFM_PLACEHOLDER } from "@/lib/lastfm/constants";
 import { NOW_PLAYING_KEY } from "@/lib/poller/now-playing";
@@ -110,7 +109,7 @@ export async function GET() {
         ? generateLeadReview(
             leadArtist,
             leadAlbum ?? "their album",
-            nowPlaying?.tags ?? [],
+            [],
             nowPlaying?.bio ?? null
           ).catch(() => null)
         : null,
