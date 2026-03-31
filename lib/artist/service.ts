@@ -3,6 +3,7 @@ import type { MusicBrainzClient } from "@/lib/musicbrainz/client";
 import type { FanartTVClient, ArtistImages } from "@/lib/fanart/client";
 import type { CoverArtArchiveClient } from "@/lib/coverart/client";
 import type { TopTrack, TopAlbum, SimilarArtist } from "@/lib/lastfm/types";
+import { LASTFM_PLACEHOLDER } from "@/lib/lastfm/constants";
 
 export interface ArtistPageData {
   name: string;
@@ -59,7 +60,11 @@ export async function getArtistPageData(
       ]);
       return {
         ...album,
-        coverArtUrl: coverArtUrl ?? album.imageUrl,
+        coverArtUrl:
+          coverArtUrl ??
+          (album.imageUrl?.includes(LASTFM_PLACEHOLDER)
+            ? null
+            : album.imageUrl),
         year,
       };
     })

@@ -1,7 +1,7 @@
 import { clients } from "@/lib/clients";
 import { NewReleasesService } from "@/lib/new-releases/service";
 import { prisma } from "@/lib/prisma";
-import { startJob } from "@/lib/jobs/runner";
+import { startJob, isStale } from "@/lib/jobs/runner";
 
 const JOB_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STALENESS_HOURS = 20;
@@ -13,17 +13,11 @@ function sinceDate(): Date {
   return since;
 }
 
-async function isStale(): Promise<boolean> {
+async function runNewReleasesJob(): Promise<void> {
   const latest = await prisma.newRelease.findFirst({
     orderBy: { createdAt: "desc" },
   });
-  if (!latest) return true;
-  const ageMs = Date.now() - latest.createdAt.getTime();
-  return ageMs > STALENESS_HOURS * 60 * 60 * 1000;
-}
-
-async function runNewReleasesJob(): Promise<void> {
-  if (!(await isStale())) return;
+  if (!isStale(latest?.createdAt ?? null, STALENESS_HOURS)) return;
 
   console.log("[NewReleasesJob] running…");
 

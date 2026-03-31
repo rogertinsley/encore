@@ -28,6 +28,7 @@ import type {
   UserInfo,
   Period,
 } from "./types";
+import { LASTFM_PLACEHOLDER } from "./constants";
 
 const BASE_URL = "https://ws.audioscrobbler.com/2.0";
 
@@ -137,8 +138,6 @@ export class LastFMClient {
       artist: artistName,
       limit: String(limit),
     });
-
-    const LASTFM_PLACEHOLDER = "2a96cbd8b46e442fc41c2b86b821562f";
 
     return data.topalbums.album.map((a) => {
       const img =
@@ -265,7 +264,6 @@ export class LastFMClient {
     period: Period,
     limit = 12
   ): Promise<UserTopAlbum[]> {
-    const PLACEHOLDER = "2a96cbd8b46e442fc41c2b86b821562f";
     const data = await this.fetch<{
       topalbums: {
         album: Array<{
@@ -288,7 +286,7 @@ export class LastFMClient {
         a.image?.find((i) => i.size === "extralarge") ??
         a.image?.find((i) => i.size === "large");
       const imageUrl =
-        img?.["#text"] && !img["#text"].includes(PLACEHOLDER)
+        img?.["#text"] && !img["#text"].includes(LASTFM_PLACEHOLDER)
           ? img["#text"]
           : null;
       return {

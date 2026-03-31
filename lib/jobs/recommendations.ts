@@ -1,23 +1,17 @@
 import { clients } from "@/lib/clients";
 import { recommend } from "@/lib/recommendations/engine";
 import { prisma } from "@/lib/prisma";
-import { startJob } from "@/lib/jobs/runner";
+import { startJob, isStale } from "@/lib/jobs/runner";
 
 const JOB_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STALENESS_HOURS = 20;
 const MAX_ARTISTS = 20;
 
-async function isStale(): Promise<boolean> {
+async function runRecommendationsJob(): Promise<void> {
   const latest = await prisma.recommendation.findFirst({
     orderBy: { createdAt: "desc" },
   });
-  if (!latest) return true;
-  const ageMs = Date.now() - latest.createdAt.getTime();
-  return ageMs > STALENESS_HOURS * 60 * 60 * 1000;
-}
-
-async function runRecommendationsJob(): Promise<void> {
-  if (!(await isStale())) return;
+  if (!isStale(latest?.createdAt ?? null, STALENESS_HOURS)) return;
 
   console.log("[RecommendationsJob] running…");
 
