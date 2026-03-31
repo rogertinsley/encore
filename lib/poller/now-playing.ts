@@ -89,7 +89,30 @@ export function createNowPlayingPipeline(
         JSON.stringify(data)
       );
     } catch (err) {
-      console.error("[NowPlayingPoller] poll failed:", err);
+      // Network errors mean the device is off — treat as idle and stay quiet.
+      const cause =
+        err instanceof Error
+          ? (err.cause as NodeJS.ErrnoException | undefined)
+          : undefined;
+      const code =
+        cause?.code ??
+        (err instanceof Error
+          ? (err as NodeJS.ErrnoException).code
+          : undefined);
+      const deviceUnreachable = [
+        "EHOSTDOWN",
+        "ECONNREFUSED",
+        "ECONNRESET",
+        "ETIMEDOUT",
+        "ENOTFOUND",
+      ].includes(code ?? "");
+      if (deviceUnreachable) {
+        cachedTrackKey = null;
+        cachedEnrichment = null;
+        await redis.del(NOW_PLAYING_KEY).catch(() => null);
+      } else {
+        console.error("[NowPlayingPoller] poll failed:", err);
+      }
     }
   };
 
