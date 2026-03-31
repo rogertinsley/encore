@@ -4,14 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { startJob, isStale } from "@/lib/jobs/runner";
 
 const JOB_INTERVAL_MS = 24 * 60 * 60 * 1000;
-const STALENESS_HOURS = 20;
 const MAX_ARTISTS = 20;
 
 async function runRecommendationsJob(): Promise<void> {
   const latest = await prisma.recommendation.findFirst({
     orderBy: { createdAt: "desc" },
   });
-  if (!isStale(latest?.createdAt ?? null, STALENESS_HOURS)) return;
+  if (!isStale(latest?.createdAt ?? null)) return;
 
   console.log("[RecommendationsJob] running…");
 
@@ -32,9 +31,21 @@ async function runRecommendationsJob(): Promise<void> {
         lastfm.getSimilarArtists(artist.name).catch(() => []),
         lastfm.getArtistInfo(artist.name).catch(() => null),
       ]);
+      if (!info) {
+        console.warn(
+          `[RecommendationsJob] no info for ${artist.name} — tags will be empty`
+        );
+      }
       return { artist: { ...artist, tags: info?.tags ?? [] }, similar };
     })
   );
+
+  const degraded = enriched.filter((e) => !e.similar.length).length;
+  if (degraded > 0) {
+    console.warn(
+      `[RecommendationsJob] ${degraded}/${slice.length} artists have no similar artists (Last.FM may be degraded)`
+    );
+  }
 
   const topArtistsWithTags = enriched.map((e) => e.artist);
   const similarArtistsMap = Object.fromEntries(

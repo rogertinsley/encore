@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { startJob, isStale } from "@/lib/jobs/runner";
 
 const JOB_INTERVAL_MS = 24 * 60 * 60 * 1000;
-const STALENESS_HOURS = 20;
 
 function sinceDate(): Date {
   const days = parseInt(process.env.NEW_RELEASES_DAYS_WINDOW ?? "90", 10);
@@ -17,7 +16,7 @@ async function runNewReleasesJob(): Promise<void> {
   const latest = await prisma.newRelease.findFirst({
     orderBy: { createdAt: "desc" },
   });
-  if (!isStale(latest?.createdAt ?? null, STALENESS_HOURS)) return;
+  if (!isStale(latest?.createdAt ?? null)) return;
 
   console.log("[NewReleasesJob] running…");
 
