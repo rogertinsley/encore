@@ -9,6 +9,12 @@ async function ask(prompt: string): Promise<string> {
   return msg.choices[0]?.message.content?.trim() ?? "";
 }
 
+function parsePullQuote(text: string): AlbumReview {
+  const [reviewPart, pullPart] = text.split(/PULLQUOTE:/i);
+  if (!pullPart) throw new Error("AI response missing PULLQUOTE marker");
+  return { review: reviewPart.trim(), pullQuote: pullPart.trim() };
+}
+
 export interface AlbumReview {
   review: string;
   pullQuote: string;
@@ -43,11 +49,7 @@ After the review, on a new line write: PULLQUOTE: followed by a single compellin
 
 Be specific, opinionated, and use vivid language. Do not use phrases like "sonic landscape" or "journey".`);
 
-  const [reviewPart, pullPart] = text.split(/PULLQUOTE:/i);
-  return {
-    review: reviewPart.trim(),
-    pullQuote: pullPart?.trim() ?? "",
-  };
+  return parsePullQuote(text);
 }
 
 export async function generateWeeklyDigest(
@@ -78,11 +80,7 @@ After the review, on a new line write: PULLQUOTE: followed by a single compellin
 
 Be specific and opinionated. No clichés.`);
 
-  const [reviewPart, pullPart] = text.split(/PULLQUOTE:/i);
-  return {
-    review: reviewPart.trim(),
-    pullQuote: pullPart?.trim() ?? "",
-  };
+  return parsePullQuote(text);
 }
 
 export async function generateArtistSpotlight(

@@ -1,6 +1,14 @@
 import Parser from "rss-parser";
 import { FEEDS } from "./feeds";
 
+const NEWS_CACHE_KEY = "news:raw";
+const NEWS_CACHE_TTL = 60 * 60; // 1 hour
+
+type NewsRedis = {
+  get(key: string): Promise<string | null>;
+  setex(key: string, seconds: number, value: string): Promise<unknown>;
+};
+
 const parser = new Parser();
 
 export interface RawNewsItem {
@@ -64,4 +72,30 @@ export function filterNewsByArtists(
       );
     })
     .slice(0, 10);
+}
+
+/**
+ * Fetch and cache raw feeds in Redis, then filter by artist names.
+ * Hides the two-step fetch-then-filter pipeline and the Redis cache key.
+ */
+export async function getPersonalisedNews(
+  artistNames: string[],
+  redis: NewsRedis
+): Promise<NewsItem[]> {
+  let rawItems: RawNewsItem[] | null = await redis
+    .get(NEWS_CACHE_KEY)
+    .then((r) => (r ? (JSON.parse(r) as RawNewsItem[]) : null));
+
+  if (!rawItems) {
+    rawItems = await fetchAllFeeds().catch(() => []);
+    if (rawItems.length > 0) {
+      await redis.setex(
+        NEWS_CACHE_KEY,
+        NEWS_CACHE_TTL,
+        JSON.stringify(rawItems)
+      );
+    }
+  }
+
+  return filterNewsByArtists(rawItems, artistNames);
 }

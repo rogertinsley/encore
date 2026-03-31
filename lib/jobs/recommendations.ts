@@ -25,22 +25,20 @@ async function runRecommendationsJob(): Promise<void> {
 
   const slice = topArtists.slice(0, MAX_ARTISTS);
 
-  const [similarResults, artistInfoResults] = await Promise.all([
-    Promise.all(
-      slice.map((a) => lastfm.getSimilarArtists(a.name).catch(() => []))
-    ),
-    Promise.all(
-      slice.map((a) => lastfm.getArtistInfo(a.name).catch(() => null))
-    ),
-  ]);
+  // Fetch similar artists and tags per artist in parallel — avoids index-aligned arrays.
+  const enriched = await Promise.all(
+    slice.map(async (artist) => {
+      const [similar, info] = await Promise.all([
+        lastfm.getSimilarArtists(artist.name).catch(() => []),
+        lastfm.getArtistInfo(artist.name).catch(() => null),
+      ]);
+      return { artist: { ...artist, tags: info?.tags ?? [] }, similar };
+    })
+  );
 
-  const topArtistsWithTags = slice.map((artist, i) => ({
-    ...artist,
-    tags: artistInfoResults[i]?.tags ?? [],
-  }));
-
+  const topArtistsWithTags = enriched.map((e) => e.artist);
   const similarArtistsMap = Object.fromEntries(
-    slice.map((artist, i) => [artist.name, similarResults[i]])
+    enriched.map((e) => [e.artist.name, e.similar])
   );
 
   const recommendations = recommend({

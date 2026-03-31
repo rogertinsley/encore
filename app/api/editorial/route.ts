@@ -7,14 +7,13 @@ import {
   generateAlbumReview,
   generateArtistSpotlight,
 } from "@/lib/ai/editorial";
-import { fetchAllFeeds, filterNewsByArtists } from "@/lib/news/service";
+import { getPersonalisedNews } from "@/lib/news/service";
 import type { NewsItem } from "@/lib/news/service";
-import { LASTFM_PLACEHOLDER } from "@/lib/lastfm/constants";
+import { filterPlaceholder } from "@/lib/lastfm/utils";
 import { NOW_PLAYING_KEY } from "@/lib/poller/now-playing";
 import type { EnrichedNowPlaying } from "@/lib/enrichment/now-playing";
 
 const CACHE_TTL = 60 * 60; // 1 hour
-const NEWS_CACHE_KEY = "news:raw";
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
@@ -89,9 +88,7 @@ export async function GET() {
     if (!t.albumName) continue;
     const key = `${t.artistName}:::${t.albumName}`;
     const existing = albumCounts.get(key);
-    const imageUrl = !t.albumArtUrl?.includes(LASTFM_PLACEHOLDER)
-      ? (t.albumArtUrl ?? null)
-      : null;
+    const imageUrl = filterPlaceholder(t.albumArtUrl);
     if (existing) {
       existing.count++;
     } else {
@@ -111,21 +108,8 @@ export async function GET() {
   const spotlightArtist =
     recentArtistNames.find((a) => a !== leadArtist) ?? null;
 
-  // Raw news feed items — cached separately so they survive editorial cache busts
-  let rawNewsItems = await redis
-    .get(NEWS_CACHE_KEY)
-    .then((r) => (r ? JSON.parse(r) : null));
-  if (!rawNewsItems) {
-    rawNewsItems = await fetchAllFeeds().catch(() => []);
-    if (rawNewsItems.length > 0) {
-      await redis.setex(
-        NEWS_CACHE_KEY,
-        CACHE_TTL,
-        JSON.stringify(rawNewsItems)
-      );
-    }
-  }
-  const news = filterNewsByArtists(rawNewsItems ?? [], allArtistNames);
+  // News — cached separately so items survive editorial cache busts
+  const news = await getPersonalisedNews(allArtistNames, redis).catch(() => []);
 
   // Generate all AI content in parallel
   const [leadReview, weeklyDigest, albumReviewResults, spotlightContent] =

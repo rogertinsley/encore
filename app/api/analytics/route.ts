@@ -32,11 +32,11 @@ export interface AnalyticsData {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const period = (searchParams.get("period") ?? "1month") as Period;
-
-  if (!VALID_PERIODS.includes(period)) {
+  const periodParam = searchParams.get("period") ?? "1month";
+  if (!VALID_PERIODS.includes(periodParam as Period)) {
     return NextResponse.json({ error: "Invalid period" }, { status: 400 });
   }
+  const period = periodParam as Period;
 
   const username = process.env.LASTFM_USERNAME ?? "";
   const cacheKey = `analytics:${username}:${period}`;

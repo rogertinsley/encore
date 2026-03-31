@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { clients } from "@/lib/clients";
-import { LASTFM_PLACEHOLDER } from "@/lib/lastfm/constants";
+import { filterPlaceholder } from "@/lib/lastfm/utils";
 
 export async function GET() {
   try {
@@ -11,9 +11,7 @@ export async function GET() {
     return NextResponse.json(
       tracks.map((t) => ({
         ...t,
-        albumArtUrl: t.albumArtUrl?.includes(LASTFM_PLACEHOLDER)
-          ? null
-          : t.albumArtUrl,
+        albumArtUrl: filterPlaceholder(t.albumArtUrl),
         scrobbledAt: t.scrobbledAt?.toISOString() ?? null,
       }))
     );

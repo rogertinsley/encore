@@ -3,7 +3,7 @@ import { redis } from "@/lib/redis";
 import { prisma } from "@/lib/prisma";
 import { clients } from "@/lib/clients";
 import { NOW_PLAYING_KEY } from "@/lib/poller/now-playing";
-import { LASTFM_PLACEHOLDER } from "@/lib/lastfm/constants";
+import { filterPlaceholder } from "@/lib/lastfm/utils";
 import type { EnrichedNowPlaying } from "@/lib/enrichment/now-playing";
 
 export async function GET() {
@@ -30,9 +30,7 @@ export async function GET() {
     historyResult.status === "fulfilled"
       ? historyResult.value.map((t) => ({
           ...t,
-          albumArtUrl: t.albumArtUrl?.includes(LASTFM_PLACEHOLDER)
-            ? null
-            : t.albumArtUrl,
+          albumArtUrl: filterPlaceholder(t.albumArtUrl),
           scrobbledAt: t.scrobbledAt?.toISOString() ?? null,
         }))
       : [];
