@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { EnrichedNowPlaying } from "@/lib/enrichment/now-playing";
@@ -77,107 +77,6 @@ function useAlbumColors(imageUrl: string | null): AlbumColors | null {
   }, [imageUrl]);
 
   return colors;
-}
-
-// ── Waveform visualiser ──────────────────────────────────────────────────────
-
-const BAR_COUNT = 52;
-
-interface BarConfig {
-  freq1: number;
-  freq2: number;
-  freq3: number;
-  phase: number;
-  amp: number;
-}
-
-function WaveformVisualizer({
-  playing,
-  color,
-}: {
-  playing: boolean;
-  color: string;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number>(0);
-
-  // Stable per-mount bar config — gives each session its own organic shape
-  const bars = useMemo<BarConfig[]>(
-    () =>
-      Array.from({ length: BAR_COUNT }, (_, i) => ({
-        freq1: 1.2 + Math.random() * 2.2,
-        freq2: 0.7 + Math.random() * 1.8,
-        freq3: 2.0 + Math.random() * 2.5,
-        phase: (i / BAR_COUNT) * Math.PI * 6,
-        amp: 0.45 + Math.random() * 0.55,
-      })),
-    []
-  );
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const GAP = 3;
-
-    const draw = (ts: number) => {
-      const W = canvas.offsetWidth;
-      const H = canvas.offsetHeight;
-      if (canvas.width !== W || canvas.height !== H) {
-        canvas.width = W;
-        canvas.height = H;
-      }
-      ctx.clearRect(0, 0, W, H);
-
-      const t = ts / 1000;
-      const barW = (W - GAP * (BAR_COUNT - 1)) / BAR_COUNT;
-
-      for (let i = 0; i < BAR_COUNT; i++) {
-        const b = bars[i];
-        let h: number;
-        if (playing) {
-          const wave =
-            Math.sin(t * b.freq1 + b.phase) * 0.38 +
-            Math.sin(t * b.freq2 + b.phase * 1.4) * 0.34 +
-            Math.sin(t * b.freq3 + b.phase * 0.6) * 0.28;
-          h = (wave * b.amp * 0.5 + 0.5) * (H - 6) + 6;
-        } else {
-          h = 3;
-        }
-
-        const x = i * (barW + GAP);
-        const radius = Math.min(2, barW / 2);
-
-        ctx.fillStyle = color;
-        ctx.globalAlpha = playing ? 0.55 : 0.2;
-        ctx.beginPath();
-        ctx.roundRect(x, H - h, barW, h, radius);
-        ctx.fill();
-      }
-
-      rafRef.current = requestAnimationFrame(draw);
-    };
-
-    rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [playing, color, bars]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute left-0 right-0 bottom-36 md:bottom-44 pointer-events-none"
-      style={{
-        height: 90,
-        width: "100%",
-        maskImage:
-          "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-        WebkitMaskImage:
-          "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-      }}
-    />
-  );
 }
 
 function trackId(data: EnrichedNowPlaying | null): string {
@@ -617,9 +516,6 @@ function NowPlayingCard({
         positionMs={displayMs}
         playing={playing}
       />
-
-      {/* Waveform visualiser */}
-      <WaveformVisualizer playing={playing} color={waveColor} />
 
       {/* Bottom info block — sits above the progress bar */}
       <div className="absolute bottom-1 left-0 right-0 px-4 md:px-8 pb-6">
