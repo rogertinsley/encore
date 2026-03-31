@@ -1,12 +1,12 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 declare global {
   // eslint-disable-next-line no-var
-  var _anthropic: Anthropic | undefined;
+  var _openai: OpenAI | undefined;
 }
 
-export const anthropic =
-  globalThis._anthropic ??
-  (globalThis._anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY ?? "",
+export const openai =
+  globalThis._openai ??
+  (globalThis._openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY ?? "",
   }));

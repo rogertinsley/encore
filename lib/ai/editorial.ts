@@ -1,13 +1,12 @@
-import { anthropic } from "@/lib/ai/client";
+import { openai } from "@/lib/ai/client";
 
 async function ask(prompt: string): Promise<string> {
-  const msg = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
+  const msg = await openai.chat.completions.create({
+    model: "gpt-4o",
     max_tokens: 1024,
     messages: [{ role: "user", content: prompt }],
   });
-  const block = msg.content[0];
-  return block.type === "text" ? block.text.trim() : "";
+  return msg.choices[0]?.message.content?.trim() ?? "";
 }
 
 export interface AlbumReview {
