@@ -32,6 +32,14 @@ function yearsAgo(iso: string): string {
   return years === 1 ? "1 year" : `${years} years`;
 }
 
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="font-display italic text-lg font-light text-warm-300 mb-5">
+      {children}
+    </h2>
+  );
+}
+
 // ── Stats bar ─────────────────────────────────────────────────────────────────
 
 function StatsBar({ data }: { data: AnalyticsData }) {
@@ -46,12 +54,12 @@ function StatsBar({ data }: { data: AnalyticsData }) {
       {stats.map((s) => (
         <div
           key={s.label}
-          className="bg-zinc-900 rounded-xl p-5 border border-zinc-800"
+          className="bg-warm-900 rounded-xl p-5 border border-warm-700"
         >
-          <p className="text-3xl font-bold text-white tabular-nums">
+          <p className="font-display text-3xl font-light text-warm-100 tabular-nums">
             {s.value}
           </p>
-          <p className="text-xs text-zinc-500 mt-1 uppercase tracking-wider">
+          <p className="font-mono text-xs text-warm-500 mt-1 uppercase tracking-wider">
             {s.label}
           </p>
         </div>
@@ -70,36 +78,34 @@ function TopArtistsChart({
   const max = artists[0]?.playCount ?? 1;
   return (
     <section className="mb-10">
-      <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 font-medium">
-        Top Artists
-      </h2>
+      <SectionHeading>Top Artists</SectionHeading>
       <div className="flex flex-col gap-2">
         {artists.slice(0, 10).map((a, i) => {
           const pct = (a.playCount / max) * 100;
           const opacity = 1 - i * 0.06;
           return (
             <div key={a.name} className="flex items-center gap-3">
-              <span className="text-zinc-600 text-xs w-4 shrink-0 tabular-nums">
+              <span className="font-mono text-warm-600 text-xs w-4 shrink-0 tabular-nums">
                 {a.rank}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <Link
                     href={`/artist/${encodeURIComponent(a.name)}`}
-                    className="text-sm text-white hover:text-zinc-300 transition-colors truncate"
+                    className="text-sm text-warm-100 hover:text-white transition-colors truncate"
                   >
                     {a.name}
                   </Link>
-                  <span className="text-xs text-zinc-500 tabular-nums shrink-0 ml-2">
+                  <span className="font-mono text-xs text-warm-500 tabular-nums shrink-0 ml-2">
                     {fmt(a.playCount)}
                   </span>
                 </div>
-                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-1 bg-warm-800 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
                       width: `${pct}%`,
-                      background: `linear-gradient(to right, #10b981, #34d399)`,
+                      background: `linear-gradient(to right, #c8965a, #e0b47a)`,
                       opacity,
                     }}
                   />
@@ -119,9 +125,7 @@ function TopTracksList({ tracks }: { tracks: AnalyticsData["topTracks"] }) {
   const max = tracks[0]?.playCount ?? 1;
   return (
     <section className="mb-10">
-      <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 font-medium">
-        Top Tracks
-      </h2>
+      <SectionHeading>Top Tracks</SectionHeading>
       <div className="flex flex-col gap-1">
         {tracks.slice(0, 10).map((t, i) => {
           const pct = (t.playCount / max) * 100;
@@ -135,19 +139,19 @@ function TopTracksList({ tracks }: { tracks: AnalyticsData["topTracks"] }) {
                 className="absolute inset-y-0 left-0 rounded-lg transition-all duration-700"
                 style={{
                   width: `${pct}%`,
-                  background: "rgba(16,185,129,0.07)",
+                  background: "rgba(200,150,90,0.07)",
                 }}
               />
-              <span className="relative text-zinc-600 text-xs w-4 shrink-0 tabular-nums">
+              <span className="relative font-mono text-warm-600 text-xs w-4 shrink-0 tabular-nums">
                 {i + 1}
               </span>
               <div className="relative flex-1 min-w-0">
-                <p className="text-sm text-white truncate leading-tight">
+                <p className="text-sm text-warm-100 truncate leading-tight">
                   {t.name}
                 </p>
-                <p className="text-xs text-zinc-500 truncate">{t.artistName}</p>
+                <p className="text-xs text-warm-500 truncate">{t.artistName}</p>
               </div>
-              <span className="relative text-xs text-zinc-500 tabular-nums shrink-0">
+              <span className="relative font-mono text-xs text-warm-500 tabular-nums shrink-0">
                 {fmt(t.playCount)}
               </span>
             </div>
@@ -163,16 +167,14 @@ function TopTracksList({ tracks }: { tracks: AnalyticsData["topTracks"] }) {
 function TopAlbumsGrid({ albums }: { albums: AnalyticsData["topAlbums"] }) {
   return (
     <section className="mb-10">
-      <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 font-medium">
-        Top Albums
-      </h2>
+      <SectionHeading>Top Albums</SectionHeading>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
         {albums.slice(0, 12).map((a) => (
           <div
             key={`${a.artistName}-${a.name}`}
             className="flex flex-col gap-1.5"
           >
-            <div className="aspect-square rounded-lg overflow-hidden bg-zinc-800">
+            <div className="aspect-square rounded-lg overflow-hidden bg-warm-800">
               {a.imageUrl ? (
                 <Image
                   src={a.imageUrl}
@@ -183,14 +185,16 @@ function TopAlbumsGrid({ albums }: { albums: AnalyticsData["topAlbums"] }) {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-2xl text-zinc-700">♪</span>
+                  <span className="text-2xl text-warm-600">♪</span>
                 </div>
               )}
             </div>
-            <p className="text-xs text-white truncate leading-tight">
+            <p className="text-xs text-warm-200 truncate leading-tight">
               {a.name}
             </p>
-            <p className="text-xs text-zinc-500 truncate">{a.artistName}</p>
+            <p className="font-mono text-xs text-warm-500 truncate">
+              {a.artistName}
+            </p>
           </div>
         ))}
       </div>
@@ -204,19 +208,17 @@ function GenreChart({ tags }: { tags: AnalyticsData["topTags"] }) {
   const max = tags[0]?.count ?? 1;
   return (
     <section className="mb-10">
-      <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 font-medium">
-        Genre Breakdown
-      </h2>
+      <SectionHeading>Genre Breakdown</SectionHeading>
       <div className="flex flex-col gap-2">
         {tags.slice(0, 12).map((tag, i) => {
           const pct = (tag.count / max) * 100;
           const opacity = 1 - i * 0.055;
           return (
             <div key={tag.name} className="flex items-center gap-3">
-              <span className="text-xs text-white capitalize w-28 shrink-0 truncate">
+              <span className="text-xs text-warm-200 capitalize w-28 shrink-0 truncate">
                 {tag.name}
               </span>
-              <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="flex-1 h-1 bg-warm-800 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
@@ -226,7 +228,7 @@ function GenreChart({ tags }: { tags: AnalyticsData["topTags"] }) {
                   }}
                 />
               </div>
-              <span className="text-xs text-zinc-500 tabular-nums w-8 text-right shrink-0">
+              <span className="font-mono text-xs text-warm-500 tabular-nums w-8 text-right shrink-0">
                 {tag.count}
               </span>
             </div>
@@ -243,21 +245,21 @@ function NewArtists({ artists }: { artists: AnalyticsData["newArtists"] }) {
   if (artists.length === 0) return null;
   return (
     <section className="mb-10">
-      <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 font-medium">
-        New Discoveries
-      </h2>
+      <SectionHeading>New Discoveries</SectionHeading>
       <div className="flex flex-wrap gap-2">
         {artists.map((a) => (
           <Link
             key={a.name}
             href={`/artist/${encodeURIComponent(a.name)}`}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors border border-zinc-700 group"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warm-900 hover:bg-warm-800 transition-colors border border-warm-700 hover:border-warm-600 group"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-            <span className="text-sm text-white group-hover:text-zinc-200">
+            <span className="text-sm text-warm-200 group-hover:text-warm-100">
               {a.name}
             </span>
-            <span className="text-xs text-zinc-500">{fmt(a.playCount)}</span>
+            <span className="font-mono text-xs text-warm-500">
+              {fmt(a.playCount)}
+            </span>
           </Link>
         ))}
       </div>
@@ -275,7 +277,7 @@ function ListeningHeatmap({ heatmap }: { heatmap: AnalyticsData["heatmap"] }) {
   const max = Math.max(...allValues, 1);
 
   function cellColor(count: number): string {
-    if (count === 0) return "bg-zinc-800/60";
+    if (count === 0) return "bg-warm-800/60";
     const intensity = count / max;
     if (intensity < 0.2) return "bg-emerald-900/60";
     if (intensity < 0.4) return "bg-emerald-800/70";
@@ -286,9 +288,7 @@ function ListeningHeatmap({ heatmap }: { heatmap: AnalyticsData["heatmap"] }) {
 
   return (
     <section className="mb-10">
-      <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 font-medium">
-        Listening Heatmap
-      </h2>
+      <SectionHeading>Listening Heatmap</SectionHeading>
       <div className="overflow-x-auto">
         <div className="min-w-[500px]">
           {/* Hour labels */}
@@ -296,7 +296,7 @@ function ListeningHeatmap({ heatmap }: { heatmap: AnalyticsData["heatmap"] }) {
             {HOURS.map((h) => (
               <div key={h} className="flex-1 text-center">
                 {h % 6 === 0 && (
-                  <span className="text-zinc-600 text-xs">
+                  <span className="font-mono text-warm-600 text-xs">
                     {h === 0
                       ? "12am"
                       : h === 12
@@ -313,7 +313,9 @@ function ListeningHeatmap({ heatmap }: { heatmap: AnalyticsData["heatmap"] }) {
           {/* Grid */}
           {DAYS.map((day, d) => (
             <div key={day} className="flex items-center gap-1 mb-1">
-              <span className="text-zinc-600 text-xs w-9 shrink-0">{day}</span>
+              <span className="font-mono text-warm-600 text-xs w-9 shrink-0">
+                {day}
+              </span>
               <div className="flex flex-1 gap-0.5">
                 {HOURS.map((h) => {
                   const count = heatmap[d]?.[h] ?? 0;
@@ -331,9 +333,9 @@ function ListeningHeatmap({ heatmap }: { heatmap: AnalyticsData["heatmap"] }) {
 
           {/* Legend */}
           <div className="flex items-center gap-2 mt-3 ml-10">
-            <span className="text-zinc-600 text-xs">Less</span>
+            <span className="font-mono text-warm-600 text-xs">Less</span>
             {[
-              "bg-zinc-800/60",
+              "bg-warm-800/60",
               "bg-emerald-900/60",
               "bg-emerald-700/80",
               "bg-emerald-600",
@@ -341,7 +343,7 @@ function ListeningHeatmap({ heatmap }: { heatmap: AnalyticsData["heatmap"] }) {
             ].map((c) => (
               <div key={c} className={`w-3 h-3 rounded-sm ${c}`} />
             ))}
-            <span className="text-zinc-600 text-xs">More</span>
+            <span className="font-mono text-warm-600 text-xs">More</span>
           </div>
         </div>
       </div>
@@ -356,14 +358,14 @@ function Skeleton() {
     <div className="animate-pulse space-y-8">
       <div className="grid grid-cols-3 gap-4">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="bg-zinc-800 rounded-xl h-24" />
+          <div key={i} className="bg-warm-800 rounded-xl h-24" />
         ))}
       </div>
       <div className="space-y-2">
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="h-8 bg-zinc-800 rounded-lg"
+            className="h-8 bg-warm-800 rounded-lg"
             style={{ width: `${90 - i * 8}%` }}
           />
         ))}
@@ -398,8 +400,8 @@ export function AnalyticsView() {
             onClick={() => setPeriod(p.value)}
             className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
               period === p.value
-                ? "bg-white text-zinc-900 font-medium"
-                : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                ? "bg-amber-accent text-warm-950 font-medium"
+                : "bg-warm-800 text-warm-400 hover:text-warm-100 hover:bg-warm-700"
             }`}
           >
             {p.label}
@@ -411,7 +413,7 @@ export function AnalyticsView() {
         <Skeleton />
       ) : !data ? (
         <div className="flex items-center justify-center h-64">
-          <p className="text-zinc-500 text-sm">Could not load analytics.</p>
+          <p className="text-warm-500 text-sm">Could not load analytics.</p>
         </div>
       ) : (
         <>

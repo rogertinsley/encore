@@ -30,7 +30,9 @@ export function RecommendationsView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-zinc-500 text-sm animate-pulse">Loading…</p>
+        <p className="text-warm-500 text-sm animate-pulse tracking-wide">
+          Loading…
+        </p>
       </div>
     );
   }
@@ -38,10 +40,10 @@ export function RecommendationsView() {
   if (!data || data.recommendations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-zinc-500 text-sm">
+        <p className="text-warm-500 text-sm">
           No recommendations yet — check back soon.
         </p>
-        <p className="text-zinc-600 text-xs">
+        <p className="text-warm-600 text-xs">
           The daily job runs on server start and every 24 hours.
         </p>
       </div>
@@ -57,9 +59,13 @@ export function RecommendationsView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Recommendations</h1>
-        {lastRun && <p className="text-xs text-zinc-600">Updated {lastRun}</p>}
+      <div className="flex items-baseline justify-between">
+        <h1 className="font-display italic text-2xl font-light text-warm-100">
+          Recommendations
+        </h1>
+        {lastRun && (
+          <p className="font-mono text-xs text-warm-500">Updated {lastRun}</p>
+        )}
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {data.recommendations.map((rec) => (

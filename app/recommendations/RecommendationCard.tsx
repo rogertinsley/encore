@@ -27,36 +27,36 @@ export function RecommendationCard({ rec }: { rec: Recommendation }) {
   return (
     <Link
       href={`/artist/${encodeURIComponent(rec.artistName)}`}
-      className="flex flex-col gap-3 bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 hover:border-zinc-600 transition-colors"
+      className="flex flex-col gap-3 bg-warm-900 rounded-xl overflow-hidden border border-warm-700 hover:border-warm-600 transition-all duration-300 hover:bg-warm-800/60 group"
     >
-      <div className="relative w-full aspect-square bg-zinc-800">
+      <div className="relative w-full aspect-square bg-warm-800">
         {thumbnail ? (
           <Image
             src={thumbnail}
             alt={rec.artistName}
             fill
-            className="object-cover"
+            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="text-4xl text-zinc-600">♪</span>
+            <span className="text-4xl text-warm-600">♪</span>
           </div>
         )}
       </div>
       <div className="px-3 pb-4 flex flex-col gap-2">
-        <h3 className="text-white font-semibold text-sm leading-tight">
+        <h3 className="text-warm-100 font-medium text-sm leading-tight group-hover:text-white transition-colors">
           {rec.artistName}
         </h3>
-        <p className="text-zinc-500 text-xs">
+        <p className="text-warm-500 text-xs">
           Because you listen to{" "}
-          <span className="text-zinc-400">{rec.sourceArtist}</span>
+          <span className="text-warm-300">{rec.sourceArtist}</span>
         </p>
         {rec.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {rec.tags.map((tag) => (
               <span
                 key={tag}
-                className="text-xs text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full"
+                className="text-xs text-amber-accent/80 bg-amber-accent/10 px-2 py-0.5 rounded-full"
               >
                 {tag}
               </span>

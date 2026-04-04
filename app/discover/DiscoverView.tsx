@@ -38,14 +38,14 @@ interface DiscoverData {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  Album: "bg-violet-500/20 text-violet-300",
-  EP: "bg-blue-500/20 text-blue-300",
-  Single: "bg-emerald-500/20 text-emerald-300",
+  Album: "bg-violet-500/15 text-violet-300",
+  EP: "bg-blue-500/15 text-blue-300",
+  Single: "bg-emerald-500/15 text-emerald-300",
 };
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">
+    <h2 className="font-display italic text-lg font-light text-warm-300 mb-5">
       {children}
     </h2>
   );
@@ -59,32 +59,32 @@ function ReleaseCard({ release }: { release: NewRelease }) {
       href={`/artist/${encodeURIComponent(release.artistName)}`}
       className="flex flex-col gap-2 group"
     >
-      <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-zinc-800">
+      <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-warm-800">
         {release.coverArtUrl ? (
           <Image
             src={release.coverArtUrl}
             alt={release.title}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="text-3xl text-zinc-600">♪</span>
+            <span className="text-3xl text-warm-600">♪</span>
           </div>
         )}
         <span
-          className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full ${
-            TYPE_COLORS[release.releaseType] ?? "bg-zinc-800/80 text-zinc-400"
+          className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm ${
+            TYPE_COLORS[release.releaseType] ?? "bg-warm-800/80 text-warm-400"
           }`}
         >
           {release.releaseType}
         </span>
       </div>
       <div className="flex flex-col gap-0.5">
-        <p className="text-white text-sm font-medium leading-tight truncate group-hover:text-zinc-300 transition-colors">
+        <p className="text-warm-100 text-sm font-medium leading-tight truncate group-hover:text-white transition-colors">
           {release.title}
         </p>
-        <p className="text-zinc-500 text-xs truncate">{release.artistName}</p>
+        <p className="text-warm-500 text-xs truncate">{release.artistName}</p>
       </div>
     </Link>
   );
@@ -129,17 +129,17 @@ function ArtistCard({ rec }: { rec: Recommendation }) {
       href={`/artist/${encodeURIComponent(rec.artistName)}`}
       className="flex flex-col gap-2 shrink-0 w-32 group"
     >
-      <div className="relative w-32 h-32 rounded-xl overflow-hidden bg-zinc-800">
+      <div className="relative w-32 h-32 rounded-xl overflow-hidden bg-warm-800">
         {thumbnail ? (
           <Image
             src={thumbnail}
             alt={rec.artistName}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="text-3xl text-zinc-600">♪</span>
+            <span className="text-3xl text-warm-600">♪</span>
           </div>
         )}
         {inLibrary && (
@@ -149,10 +149,10 @@ function ArtistCard({ rec }: { rec: Recommendation }) {
         )}
       </div>
       <div>
-        <p className="text-white text-xs font-medium truncate group-hover:text-zinc-300 transition-colors">
+        <p className="text-warm-100 text-xs font-medium truncate group-hover:text-white transition-colors">
           {rec.artistName}
         </p>
-        <p className="text-zinc-600 text-xs truncate">
+        <p className="text-warm-500 text-xs truncate">
           Like {rec.sourceArtist}
         </p>
       </div>
@@ -185,10 +185,10 @@ function RecentlyPlayedSection({ tracks }: { tracks: RecentTrack[] }) {
   return (
     <section>
       <SectionHeading>Recently Played</SectionHeading>
-      <div className="flex flex-col divide-y divide-zinc-800/60">
+      <div className="flex flex-col divide-y divide-warm-800/60">
         {tracks.map((track, i) => (
           <div key={i} className="flex items-center gap-4 py-3 group">
-            <div className="w-10 h-10 rounded-md overflow-hidden bg-zinc-800 shrink-0">
+            <div className="w-10 h-10 rounded-md overflow-hidden bg-warm-800 shrink-0">
               {track.albumArtUrl ? (
                 <Image
                   src={track.albumArtUrl}
@@ -199,24 +199,24 @@ function RecentlyPlayedSection({ tracks }: { tracks: RecentTrack[] }) {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-sm text-zinc-600">♪</span>
+                  <span className="text-sm text-warm-600">♪</span>
                 </div>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate">
+              <p className="text-warm-100 text-sm font-medium truncate">
                 {track.trackName}
               </p>
               <Link
                 href={`/artist/${encodeURIComponent(track.artistName)}`}
-                className="text-zinc-500 text-xs truncate hover:text-zinc-300 transition-colors block"
+                className="text-warm-500 text-xs truncate hover:text-warm-300 transition-colors block"
               >
                 {track.artistName}
                 {track.albumName ? ` · ${track.albumName}` : ""}
               </Link>
             </div>
             {track.scrobbledAt && (
-              <p className="text-zinc-600 text-xs shrink-0 tabular-nums">
+              <p className="font-mono text-warm-500 text-xs shrink-0 tabular-nums">
                 {timeAgo(track.scrobbledAt)}
               </p>
             )}
@@ -244,7 +244,9 @@ export function DiscoverView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-zinc-500 text-sm animate-pulse">Loading…</p>
+        <p className="text-warm-500 text-sm animate-pulse tracking-wide">
+          Loading…
+        </p>
       </div>
     );
   }
@@ -252,7 +254,7 @@ export function DiscoverView() {
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-zinc-500 text-sm">Something went wrong.</p>
+        <p className="text-warm-500 text-sm">Something went wrong.</p>
       </div>
     );
   }

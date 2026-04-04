@@ -20,29 +20,46 @@ export function Nav() {
       className={
         isNowPlaying
           ? "fixed top-0 left-0 right-0 z-20 px-6 py-4"
-          : "border-b border-zinc-800 px-6 py-4"
+          : "border-b border-warm-700 px-6 py-4"
       }
     >
-      <nav className="max-w-4xl mx-auto flex flex-wrap items-center gap-x-6 gap-y-2">
-        <span className="text-white font-semibold text-sm tracking-wide mr-2">
+      <nav className="max-w-4xl mx-auto flex flex-wrap items-center gap-x-7 gap-y-2">
+        <Link
+          href="/"
+          className={`font-display text-[1.35rem] font-light tracking-[0.08em] mr-2 shrink-0 transition-opacity hover:opacity-80 ${
+            isNowPlaying ? "text-white" : "text-warm-100"
+          }`}
+        >
           Encore
-        </span>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          {links.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`text-sm py-2 transition-colors ${
-                pathname === href
-                  ? "text-white font-medium"
-                  : isNowPlaying
-                    ? "text-white/60 hover:text-white"
-                    : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
+        </Link>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+          {links.map(({ href, label }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`relative text-[0.8rem] py-2 tracking-[0.06em] transition-colors ${
+                  active
+                    ? isNowPlaying
+                      ? "text-white"
+                      : "text-warm-100"
+                    : isNowPlaying
+                      ? "text-white/50 hover:text-white/90"
+                      : "text-warm-400 hover:text-warm-200"
+                }`}
+              >
+                {label}
+                {active && (
+                  <span
+                    className={`absolute bottom-0 left-0 right-0 h-px ${
+                      isNowPlaying ? "bg-white/50" : "bg-amber-accent"
+                    }`}
+                  />
+                )}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </header>

@@ -191,9 +191,11 @@ function AudioQualityBadge({
   if (!source && qualityParts.length === 0) return null;
 
   return (
-    <p className="text-xs text-zinc-500 tabular-nums shrink-0 flex items-center gap-1.5">
+    <p className="font-mono text-xs text-white/35 tabular-nums shrink-0 flex items-center gap-1.5">
       {source === "qobuz" && (
-        <span className="text-white/60 font-medium tracking-wide">Qobuz</span>
+        <span className="text-white/55 font-sans font-medium tracking-wide">
+          Qobuz
+        </span>
       )}
       {qualityParts.length > 0 && <span>{qualityParts.join(" · ")}</span>}
     </p>
@@ -337,7 +339,7 @@ function QueuePanel({ queue }: { queue: PlayQueue }) {
   if (queue.tracks.length === 0) {
     return (
       <div className="absolute top-16 right-0 bottom-20 hidden md:flex w-5/12 items-center justify-center">
-        <p className="text-zinc-600 text-sm">Queue is empty</p>
+        <p className="text-white/25 text-sm tracking-wide">Queue is empty</p>
       </div>
     );
   }
@@ -362,14 +364,14 @@ function QueuePanel({ queue }: { queue: PlayQueue }) {
             <div className="flex-1 min-w-0">
               <p
                 className={`text-sm truncate leading-tight ${
-                  track.active ? "text-white font-semibold" : "text-white/70"
+                  track.active ? "text-white font-medium" : "text-white/65"
                 }`}
               >
                 {track.title}
               </p>
-              <p className="text-xs text-zinc-500 truncate">{track.artist}</p>
+              <p className="text-xs text-white/35 truncate">{track.artist}</p>
             </div>
-            <p className="text-xs text-zinc-600 tabular-nums shrink-0">
+            <p className="font-mono text-xs text-white/30 tabular-nums shrink-0">
               {formatDuration(track.durationMs)}
             </p>
           </div>
@@ -449,7 +451,7 @@ function NowPlayingCard({
   const [displayMs, setDisplayMs] = useState(data?.positionMs ?? 0);
   const receivedAtRef = useRef(Date.now());
   const albumColors = useAlbumColors(data?.albumArtUrl ?? null);
-  const waveColor = albumColors?.primary ?? "#34d399";
+  const waveColor = albumColors?.primary ?? "#c8965a";
 
   useEffect(() => {
     receivedAtRef.current = Date.now();
@@ -468,11 +470,11 @@ function NowPlayingCard({
 
   if (!data) {
     return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-950">
-        <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center">
-          <span className="text-2xl">♪</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-warm-950">
+        <div className="w-16 h-16 rounded-full bg-warm-800 flex items-center justify-center">
+          <span className="text-2xl text-warm-500">♪</span>
         </div>
-        <p className="text-zinc-500 text-sm">Nothing playing</p>
+        <p className="text-warm-500 text-sm tracking-wide">Nothing playing</p>
       </div>
     );
   }
@@ -514,7 +516,7 @@ function NowPlayingCard({
           )}
         </>
       ) : (
-        <div className="absolute inset-0 bg-zinc-950" />
+        <div className="absolute inset-0 bg-warm-950" />
       )}
 
       {/* Right panel — queue or lyrics */}
@@ -530,7 +532,7 @@ function NowPlayingCard({
         {/* Row 1: album art + track info + controls */}
         <div className="flex items-center gap-3 md:gap-5">
           {/* Album art thumbnail */}
-          <div className="w-16 h-16 md:w-24 md:h-24 rounded-md overflow-hidden shrink-0 bg-zinc-800 shadow-xl">
+          <div className="w-16 h-16 md:w-24 md:h-24 rounded-md overflow-hidden shrink-0 bg-warm-800 shadow-xl shadow-black/40">
             {data.albumArtUrl ? (
               <Image
                 src={data.albumArtUrl}
@@ -541,24 +543,24 @@ function NowPlayingCard({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-xl text-zinc-600">♪</span>
+                <span className="text-xl text-warm-600">♪</span>
               </div>
             )}
           </div>
 
           {/* Track info */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-base md:text-xl font-bold text-white truncate leading-tight">
+            <h1 className="text-base md:text-xl font-semibold text-white truncate leading-tight tracking-tight">
               {data.trackName}
             </h1>
             <Link
               href={`/artist/${encodeURIComponent(data.artistName)}`}
-              className="text-sm text-zinc-300 hover:text-white transition-colors truncate block"
+              className="text-sm text-white/70 hover:text-white transition-colors truncate block mt-0.5"
             >
               {data.artistName}
             </Link>
             {data.albumName && (
-              <p className="text-xs text-zinc-500 truncate mt-0.5">
+              <p className="text-xs text-white/40 truncate mt-0.5 font-mono">
                 {data.albumName}
               </p>
             )}
@@ -572,12 +574,12 @@ function NowPlayingCard({
         <div className="flex items-center gap-3 mt-2 pl-0">
           <div className="flex items-center gap-2">
             <EqualizerBars playing={playing} />
-            <span className="text-xs text-emerald-400 font-medium whitespace-nowrap">
-              {playing ? "Now Playing" : "Paused"}
+            <span className="text-xs text-emerald-400/90 font-mono tracking-wide whitespace-nowrap">
+              {playing ? "playing" : "paused"}
             </span>
           </div>
           {data.durationMs > 0 && (
-            <p className="text-xs text-zinc-500 tabular-nums whitespace-nowrap">
+            <p className="font-mono text-xs text-white/40 tabular-nums whitespace-nowrap">
               {formatTime(displayMs)} / {formatTime(data.durationMs)}
             </p>
           )}
@@ -699,8 +701,10 @@ export function NowPlayingView() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-10 flex items-center justify-center bg-zinc-950">
-        <p className="text-zinc-500 text-sm animate-pulse">Loading…</p>
+      <div className="fixed inset-0 z-10 flex items-center justify-center bg-warm-950">
+        <p className="text-warm-500 text-sm animate-pulse tracking-wide">
+          Loading…
+        </p>
       </div>
     );
   }

@@ -25,7 +25,9 @@ export function ArtistView({ artistName }: { artistName: string }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-zinc-500 text-sm animate-pulse">Loading…</p>
+        <p className="text-warm-500 text-sm animate-pulse tracking-wide">
+          Loading…
+        </p>
       </div>
     );
   }
@@ -33,7 +35,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-zinc-500 text-sm">Artist not found.</p>
+        <p className="text-warm-500 text-sm">Artist not found.</p>
       </div>
     );
   }
@@ -43,7 +45,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
   return (
     <div className="flex flex-col gap-8">
       {/* Hero */}
-      <div className="relative -mx-6 -mt-8 h-64 overflow-hidden rounded-b-lg">
+      <div className="relative -mx-6 -mt-8 h-72 overflow-hidden rounded-b-lg">
         {data.artistImages?.background ? (
           <>
             <Image
@@ -53,16 +55,16 @@ export function ArtistView({ artistName }: { artistName: string }) {
               className="object-cover object-top"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/40 to-black/90" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/92" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950" />
+          <div className="absolute inset-0 bg-gradient-to-b from-warm-800 to-warm-950" />
         )}
 
-        {/* Artist name + logo overlay */}
+        {/* Artist name + thumbnail overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end gap-4">
           {data.artistImages?.thumbnail && (
-            <div className="w-16 h-16 rounded-full overflow-hidden bg-zinc-800 shrink-0 border-2 border-zinc-700">
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-warm-800 shrink-0 border border-white/10">
               <Image
                 src={data.artistImages.thumbnail}
                 alt={data.name}
@@ -73,14 +75,14 @@ export function ArtistView({ artistName }: { artistName: string }) {
             </div>
           )}
           <div className="flex flex-col gap-1 min-w-0">
-            <h1 className="text-2xl font-bold text-white leading-tight">
+            <h1 className="font-display text-3xl font-light text-white leading-tight tracking-tight">
               {data.name}
             </h1>
-            <div className="flex items-center gap-3 text-xs text-zinc-400">
+            <div className="flex items-center gap-3 font-mono text-xs text-white/45">
               <span>{formatNumber(data.listeners)} listeners</span>
               {data.userPlayCount != null && (
                 <>
-                  <span className="text-zinc-600">·</span>
+                  <span className="text-white/25">·</span>
                   <span>{formatNumber(data.userPlayCount)} plays</span>
                 </>
               )}
@@ -95,7 +97,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
           {data.tags.map((tag) => (
             <span
               key={tag}
-              className="text-xs text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full border border-zinc-700"
+              className="text-xs text-amber-accent/75 bg-amber-accent/10 px-3 py-1 rounded-full"
             >
               {tag}
             </span>
@@ -104,27 +106,29 @@ export function ArtistView({ artistName }: { artistName: string }) {
       )}
 
       {/* Bio */}
-      {bio && <p className="text-sm text-zinc-400 leading-relaxed">{bio}</p>}
+      {bio && (
+        <p className="text-sm text-warm-400 leading-relaxed max-w-2xl">{bio}</p>
+      )}
 
       {/* Top Tracks */}
       {data.topTracks.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+          <h2 className="font-display italic text-lg font-light text-warm-300">
             Top Tracks
           </h2>
           <div className="flex flex-col gap-1">
             {data.topTracks.map((track) => (
               <div
                 key={track.name}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-800/50 transition-colors"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-warm-800/50 transition-colors"
               >
-                <span className="text-xs text-zinc-600 w-4 shrink-0 text-right">
+                <span className="font-mono text-xs text-warm-600 w-4 shrink-0 text-right">
                   {track.rank}
                 </span>
-                <p className="text-sm text-white truncate flex-1">
+                <p className="text-sm text-warm-100 truncate flex-1">
                   {track.name}
                 </p>
-                <span className="text-xs text-zinc-500 shrink-0">
+                <span className="font-mono text-xs text-warm-500 shrink-0">
                   {formatNumber(track.playCount)}
                 </span>
               </div>
@@ -136,13 +140,13 @@ export function ArtistView({ artistName }: { artistName: string }) {
       {/* Top Albums */}
       {data.topAlbums.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+          <h2 className="font-display italic text-lg font-light text-warm-300">
             Albums
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {data.topAlbums.map((album) => (
               <div key={album.name} className="flex flex-col gap-1.5">
-                <div className="aspect-square rounded-lg overflow-hidden bg-zinc-800">
+                <div className="aspect-square rounded-lg overflow-hidden bg-warm-800">
                   {album.coverArtUrl ? (
                     <Image
                       src={album.coverArtUrl}
@@ -153,13 +157,15 @@ export function ArtistView({ artistName }: { artistName: string }) {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-3xl text-zinc-600">♪</span>
+                      <span className="text-3xl text-warm-600">♪</span>
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-zinc-300 truncate">{album.name}</p>
+                <p className="text-xs text-warm-200 truncate">{album.name}</p>
                 {album.year && (
-                  <p className="text-xs text-zinc-600">{album.year}</p>
+                  <p className="font-mono text-xs text-warm-500">
+                    {album.year}
+                  </p>
                 )}
               </div>
             ))}
@@ -170,7 +176,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
       {/* Similar Artists */}
       {data.similarArtists.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+          <h2 className="font-display italic text-lg font-light text-warm-300">
             Similar Artists
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -178,7 +184,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
               <Link
                 key={artist.name}
                 href={`/artist/${encodeURIComponent(artist.name)}`}
-                className="text-sm text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-full transition-colors"
+                className="text-sm text-warm-300 bg-warm-900 hover:bg-warm-800 border border-warm-700 hover:border-warm-600 px-3 py-1.5 rounded-full transition-colors"
               >
                 {artist.name}
               </Link>

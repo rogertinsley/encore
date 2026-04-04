@@ -20,9 +20,9 @@ interface NewReleasesResponse {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  Album: "bg-violet-500/20 text-violet-300",
-  EP: "bg-blue-500/20 text-blue-300",
-  Single: "bg-emerald-500/20 text-emerald-300",
+  Album: "bg-violet-500/15 text-violet-300",
+  EP: "bg-blue-500/15 text-blue-300",
+  Single: "bg-emerald-500/15 text-emerald-300",
 };
 
 function formatDate(dateStr: string): string {
@@ -40,7 +40,6 @@ function groupByDate(releases: NewRelease[]): [string, NewRelease[]][] {
     if (!map.has(day)) map.set(day, []);
     map.get(day)!.push(r);
   }
-  // Already sorted by date desc from API; sort within each group by playCount desc
   for (const group of map.values()) {
     group.sort((a, b) => b.playCount - a.playCount);
   }
@@ -62,7 +61,9 @@ export function NewReleasesView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-zinc-500 text-sm animate-pulse">Loading…</p>
+        <p className="text-warm-500 text-sm animate-pulse tracking-wide">
+          Loading…
+        </p>
       </div>
     );
   }
@@ -70,8 +71,8 @@ export function NewReleasesView() {
   if (!data || data.releases.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-zinc-500 text-sm">No new releases found yet.</p>
-        <p className="text-zinc-600 text-xs">
+        <p className="text-warm-500 text-sm">No new releases found yet.</p>
+        <p className="text-warm-600 text-xs">
           The daily job runs on server start and every 24 hours.
         </p>
       </div>
@@ -89,24 +90,28 @@ export function NewReleasesView() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">New Releases</h1>
-        {lastRun && <p className="text-xs text-zinc-600">Updated {lastRun}</p>}
+      <div className="flex items-baseline justify-between">
+        <h1 className="font-display italic text-2xl font-light text-warm-100">
+          New Releases
+        </h1>
+        {lastRun && (
+          <p className="font-mono text-xs text-warm-500">Updated {lastRun}</p>
+        )}
       </div>
 
       {groups.map(([date, releases]) => (
         <section key={date} className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+          <h2 className="font-display italic text-base text-warm-400 font-light">
             {formatDate(date)}
           </h2>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {releases.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center gap-4 bg-zinc-900 rounded-xl p-3 border border-zinc-800 hover:border-zinc-600 transition-colors"
+                className="flex items-center gap-4 bg-warm-900 rounded-xl p-3 border border-warm-700 hover:border-warm-600 hover:bg-warm-800/50 transition-all duration-200"
               >
                 {/* Album art */}
-                <div className="w-14 h-14 rounded-lg overflow-hidden bg-zinc-800 shrink-0">
+                <div className="w-14 h-14 rounded-lg overflow-hidden bg-warm-800 shrink-0">
                   {r.coverArtUrl ? (
                     <Image
                       src={r.coverArtUrl}
@@ -117,19 +122,19 @@ export function NewReleasesView() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-xl text-zinc-600">♪</span>
+                      <span className="text-xl text-warm-600">♪</span>
                     </div>
                   )}
                 </div>
 
                 {/* Info */}
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                  <p className="text-white text-sm font-medium truncate">
+                  <p className="text-warm-100 text-sm font-medium truncate">
                     {r.title}
                   </p>
                   <Link
                     href={`/artist/${encodeURIComponent(r.artistName)}`}
-                    className="text-zinc-400 text-xs truncate hover:text-zinc-200 transition-colors"
+                    className="text-warm-400 text-xs truncate hover:text-warm-200 transition-colors"
                   >
                     {r.artistName}
                   </Link>
@@ -138,7 +143,7 @@ export function NewReleasesView() {
                 {/* Type badge */}
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
-                    TYPE_COLORS[r.releaseType] ?? "bg-zinc-800 text-zinc-400"
+                    TYPE_COLORS[r.releaseType] ?? "bg-warm-800 text-warm-400"
                   }`}
                 >
                   {r.releaseType}

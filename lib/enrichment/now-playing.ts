@@ -64,7 +64,7 @@ export async function enrichNowPlaying(
 ): Promise<
   Omit<
     EnrichedNowPlaying,
-    "positionMs" | "durationMs" | "playState" | "audioFormat"
+    "positionMs" | "durationMs" | "playState" | "audioFormat" | "source"
   >
 > {
   const [artistInfo, mbid, albumArtUrl] = await Promise.all([
