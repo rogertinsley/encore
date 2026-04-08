@@ -13,6 +13,7 @@
 services:
   app:
     image: ghcr.io/rogertinsley/encore:latest
+    container_name: encore
     ports:
       - "3567:3567"
     env_file:
@@ -26,9 +27,13 @@ services:
       cache:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - internal
+      - default
 
   db:
     image: postgres:16-alpine
+    container_name: encore-db
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -37,23 +42,32 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-encore}"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - internal
 
   cache:
     image: redis:7-alpine
+    container_name: encore-cache
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - internal
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  internal:
+    internal: true
