@@ -22,12 +22,11 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Only the Prisma packages needed for runtime migrations — the standalone
-# output bundles everything else the app needs in its own node_modules
-COPY --from=prod-deps /app/node_modules/prisma ./node_modules/prisma
-COPY --from=prod-deps /app/node_modules/@prisma ./node_modules/@prisma
+# Full production node_modules — needed for Prisma CLI (migrate deploy) in entrypoint.sh.
+# Prisma's transitive deps span multiple package namespaces so a surgical copy isn't viable.
+COPY --from=prod-deps /app/node_modules ./node_modules
 
-# Standalone output (includes its own minimal node_modules for the app)
+# Standalone output copies on top (its minimal node_modules subset takes precedence)
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
