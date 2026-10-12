@@ -17,11 +17,15 @@ export function playbackPosition(
 
 export function trackIdentity(data: EnrichedNowPlaying | null): string {
   return data
-    ? `${data.artistName}\u0000${data.trackName}\u0000${data.albumName ?? ""}`
+    ? `${data.artistName}\u0000${data.trackName}\u0000${data.albumName ?? ""}\u0000${data.source ?? ""}`
     : "__idle__";
 }
 
 export function formatTime(ms: number): string {
   const seconds = Math.floor(Math.max(0, ms) / 1000);
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+export function isLivePlayback(data: EnrichedNowPlaying): boolean {
+  return data.source?.toLowerCase() === "radioparadise" || data.durationMs <= 0;
 }

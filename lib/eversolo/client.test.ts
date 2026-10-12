@@ -156,6 +156,47 @@ describe("EversoloClient", () => {
       });
     });
 
+    it("uses another artwork field when the preferred field is blank", async () => {
+      mockFetch({
+        state: 3,
+        playingMusic: {
+          title: "Radio Song",
+          streamId: "radioparadise",
+          albumArtBig: "",
+          albumArt: "https://img.radioparadise.com/cover.jpg",
+        },
+      });
+      expect((await client.getState()).track?.albumArtUrl).toBe(
+        "https://img.radioparadise.com/cover.jpg"
+      );
+    });
+
+    it("resolves device-relative cover URLs on the server", async () => {
+      mockFetch({
+        state: 3,
+        playingMusic: { title: "Local Song", coverUrl: "/cover/123.jpg" },
+      });
+      expect((await client.getState()).track?.albumArtUrl).toBe(
+        "http://192.168.1.1:9529/cover/123.jpg"
+      );
+    });
+
+    it("uses alternate art only when it belongs to the same track", async () => {
+      mockFetch({
+        state: 3,
+        playingMusic: { title: "Radio Song" },
+        everSoloPlayInfo: {
+          everSoloPlayAudioInfo: {
+            songName: "Radio Song",
+            albumUrl: "https://example.com/same-song.jpg",
+          },
+        },
+      });
+      expect((await client.getState()).track?.albumArtUrl).toBe(
+        "https://example.com/same-song.jpg"
+      );
+    });
+
     it("returns null track when neither path has data", async () => {
       mockFetch({ state: 0 });
 
@@ -210,6 +251,33 @@ describe("EversoloClient", () => {
         new Error("Network error")
       );
       expect(await client.isArtistInLibrary("Radiohead")).toBe(false);
+    });
+  });
+
+  describe("getPlayQueue", () => {
+    it("bounds the device request and maps queue entries", async () => {
+      const spy = mockFetch({
+        total: 1,
+        array: [
+          {
+            id: 42,
+            title: "Next",
+            artist: "Artist",
+            duration: 123000,
+            active: true,
+          },
+        ],
+      });
+      const queue = await client.getPlayQueue();
+      expect(queue.tracks[0]).toMatchObject({
+        id: 42,
+        title: "Next",
+        active: true,
+      });
+      expect(spy).toHaveBeenCalledWith(
+        "http://192.168.1.1:9529/ZidooMusicControl/v2/getPlayQueue",
+        { signal: expect.any(AbortSignal) }
+      );
     });
   });
 

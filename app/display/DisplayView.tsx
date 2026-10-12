@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import { useDisplayPreferences } from "@/hooks/useDisplayPreferences";
 import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 import {
   formatTime,
+  isLivePlayback,
   playbackPosition,
   trackIdentity,
 } from "@/lib/display/playback";
@@ -16,6 +17,7 @@ import {
   type PlaybackAction,
 } from "@/lib/eversolo/send-control";
 import { DisplaySettings } from "./DisplaySettings";
+import { DisplayPanel, type DisplayPanelTab } from "./DisplayPanel";
 import styles from "./display.module.css";
 
 function useClock(active: boolean) {
@@ -26,6 +28,50 @@ function useClock(active: boolean) {
     return () => window.clearInterval(id);
   }, [active]);
   return now;
+}
+
+function useRetainedArtwork(url: string | null, identity: string) {
+  const [visibleUrl, setVisibleUrl] = useState(url);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const [directUrls, setDirectUrls] = useState<string[]>([]);
+  const visibleRef = useRef(url);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (url === visibleRef.current) {
+      setPendingUrl(null);
+      return;
+    }
+    setPendingUrl(url);
+    timerRef.current = setTimeout(() => {
+      visibleRef.current = null;
+      setVisibleUrl(null);
+      if (!url) setPendingUrl(null);
+    }, 2_500);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [url, identity]);
+
+  const confirm = (loadedUrl: string) => {
+    if (loadedUrl !== pendingUrl) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    visibleRef.current = loadedUrl;
+    setVisibleUrl(loadedUrl);
+    setPendingUrl(null);
+  };
+  const handleError = (failedUrl: string) => {
+    if (!directUrls.includes(failedUrl)) {
+      setDirectUrls((current) => [...current.slice(-3), failedUrl]);
+    } else if (failedUrl === pendingUrl) {
+      setPendingUrl(null);
+    } else if (failedUrl === visibleRef.current) {
+      visibleRef.current = null;
+      setVisibleUrl(null);
+    }
+  };
+  return { visibleUrl, pendingUrl, directUrls, confirm, handleError };
 }
 
 function PlaybackControls({
@@ -137,12 +183,15 @@ export function DisplayView() {
   const { data, connection } = useNowPlaying();
   const { preferences, setPreferences } = useDisplayPreferences();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [panel, setPanel] = useState<DisplayPanelTab | null>(null);
   const [idle, setIdle] = useState(false);
   const [position, setPosition] = useState(0);
   const receivedAt = useRef(Date.now());
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null);
   const now = useClock(idle && preferences.clock);
   const key = trackIdentity(data);
+  const artwork = useRetainedArtwork(data?.albumArtUrl ?? null, key);
+  const closePanel = useCallback(() => setPanel(null), []);
   useScreenWakeLock(
     preferences.wakeLock &&
       !!data &&
@@ -174,6 +223,9 @@ export function DisplayView() {
     );
     return () => window.clearTimeout(id);
   }, [data?.playState, key, preferences.idleTimeout]);
+  useEffect(() => {
+    if (key === "__idle__") setPanel(null);
+  }, [key]);
 
   const startPress = () => {
     longPress.current = setTimeout(() => setSettingsOpen(true), 700);
@@ -190,6 +242,7 @@ export function DisplayView() {
   const duration = data?.durationMs ?? 0;
   const pct = duration > 0 ? Math.min(100, (position / duration) * 100) : 0;
   const disconnected = connection === "disconnected";
+  const live = data ? isLivePlayback(data) : false;
 
   return (
     <div
@@ -198,13 +251,13 @@ export function DisplayView() {
       onTouchEnd={endPress}
       onTouchCancel={endPress}
     >
-      {data?.albumArtUrl && !idle && (
+      {artwork.visibleUrl && !idle && (
         <div
           className={`${styles.background} ${preferences.animatedBackground ? styles.animatedBackground : ""}`}
-          key={data.albumArtUrl}
+          key={artwork.visibleUrl}
         >
           <Image
-            src={data.albumArtUrl}
+            src={artwork.visibleUrl}
             alt=""
             fill
             sizes="100vw"
@@ -249,27 +302,56 @@ export function DisplayView() {
         </div>
       ) : data ? (
         <div className={styles.stage} key={key}>
-          <div className={styles.artworkFrame}>
-            {data.albumArtUrl ? (
+          <button
+            className={styles.artworkFrame}
+            type="button"
+            aria-label="Show artist and album details"
+            onClick={() => setPanel("info")}
+          >
+            {artwork.visibleUrl ? (
               <Image
-                src={data.albumArtUrl}
-                alt={`Cover of ${data.albumName ?? data.trackName}`}
+                key={artwork.visibleUrl}
+                src={artwork.visibleUrl}
+                alt="Album artwork"
                 fill
                 priority
                 sizes="(orientation: landscape) 48vw, 80vw"
                 className={styles.artwork}
+                unoptimized={artwork.directUrls.includes(artwork.visibleUrl)}
+                onError={() => artwork.handleError(artwork.visibleUrl!)}
               />
             ) : (
               <div className={styles.artworkMissing}>
                 <span>♪</span>
               </div>
             )}
-          </div>
+            {artwork.pendingUrl &&
+              artwork.pendingUrl !== artwork.visibleUrl && (
+                <Image
+                  key={artwork.pendingUrl}
+                  src={artwork.pendingUrl}
+                  alt=""
+                  fill
+                  priority
+                  sizes="(orientation: landscape) 48vw, 80vw"
+                  className={styles.artworkCandidate}
+                  style={{ opacity: 0 }}
+                  unoptimized={artwork.directUrls.includes(artwork.pendingUrl)}
+                  onLoad={() => artwork.confirm(artwork.pendingUrl!)}
+                  onError={() => artwork.handleError(artwork.pendingUrl!)}
+                />
+              )}
+            <span className={styles.artworkHint}>About this record</span>
+          </button>
           <div className={styles.information}>
             <div className={styles.trackText}>
               <p className={styles.eyebrow}>
                 <span className={styles.statusDot} />
-                {data.playState === "playing" ? "NOW PLAYING" : "PAUSED"}
+                {data.playState === "playing"
+                  ? live
+                    ? "LIVE · NOW PLAYING"
+                    : "NOW PLAYING"
+                  : "PAUSED"}
               </p>
               <h1 title={data.trackName}>
                 {data.trackName || "Unknown track"}
@@ -282,24 +364,41 @@ export function DisplayView() {
               </p>
             </div>
             <div className={styles.transport}>
-              <div
-                className={styles.progress}
-                role="progressbar"
-                aria-label="Track progress"
-                aria-valuemin={0}
-                aria-valuemax={duration || 100}
-                aria-valuenow={position}
-              >
-                <div style={{ width: `${pct}%` }} />
-              </div>
-              <div className={styles.times}>
-                <span>{formatTime(position)}</span>
-                <span>{duration > 0 ? formatTime(duration) : "—:——"}</span>
-              </div>
+              {duration > 0 ? (
+                <>
+                  <div
+                    className={styles.progress}
+                    role="progressbar"
+                    aria-label="Track progress"
+                    aria-valuemin={0}
+                    aria-valuemax={duration}
+                    aria-valuenow={position}
+                  >
+                    <div style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className={styles.times}>
+                    <span>{formatTime(position)}</span>
+                    <span>{formatTime(duration)}</span>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.liveProgress}>LIVE STREAM</div>
+              )}
               {preferences.controls && (
                 <PlaybackControls state={data.playState} />
               )}
               {preferences.quality && <AudioQuality data={data} />}
+              <div className={styles.detailActions}>
+                <button type="button" onClick={() => setPanel("info")}>
+                  Info
+                </button>
+                <button type="button" onClick={() => setPanel("lyrics")}>
+                  Lyrics
+                </button>
+                <button type="button" onClick={() => setPanel("queue")}>
+                  Queue
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -311,6 +410,15 @@ export function DisplayView() {
           value={preferences}
           onChange={setPreferences}
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+      {panel && data && !idle && (
+        <DisplayPanel
+          tab={panel}
+          onTabChange={setPanel}
+          onClose={closePanel}
+          data={data}
+          position={position}
         />
       )}
     </div>
