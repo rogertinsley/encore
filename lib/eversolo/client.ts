@@ -191,7 +191,8 @@ export class EversoloClient {
   async getPlayQueue(): Promise<PlayQueue> {
     try {
       const res = await fetch(
-        `${this.baseUrl}/ZidooMusicControl/v2/getPlayQueue`
+        `${this.baseUrl}/ZidooMusicControl/v2/getPlayQueue`,
+        { signal: AbortSignal.timeout(5_000) }
       );
       if (!res.ok) return { tracks: [], total: 0 };
       const data = (await res.json()) as ZidooQueueResponse;

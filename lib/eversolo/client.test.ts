@@ -254,6 +254,33 @@ describe("EversoloClient", () => {
     });
   });
 
+  describe("getPlayQueue", () => {
+    it("bounds the device request and maps queue entries", async () => {
+      const spy = mockFetch({
+        total: 1,
+        array: [
+          {
+            id: 42,
+            title: "Next",
+            artist: "Artist",
+            duration: 123000,
+            active: true,
+          },
+        ],
+      });
+      const queue = await client.getPlayQueue();
+      expect(queue.tracks[0]).toMatchObject({
+        id: 42,
+        title: "Next",
+        active: true,
+      });
+      expect(spy).toHaveBeenCalledWith(
+        "http://192.168.1.1:9529/ZidooMusicControl/v2/getPlayQueue",
+        { signal: expect.any(AbortSignal) }
+      );
+    });
+  });
+
   describe("control", () => {
     it("posts to the correct endpoint", async () => {
       const spy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
