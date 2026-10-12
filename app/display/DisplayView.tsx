@@ -117,7 +117,7 @@ function PlaybackControls({
 
 function AudioQuality({ data }: { data: EnrichedNowPlaying }) {
   const parts = [
-    data.source,
+    data.source === "radioparadise" ? "Radio Paradise" : data.source,
     data.audioFormat?.extension,
     data.audioFormat?.bits && data.audioFormat.bits !== "0"
       ? `${data.audioFormat.bits}-bit`

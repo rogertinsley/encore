@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.mzstatic.com" },
       { hostname: "lastfm.freetls.fastly.net" },
       { protocol: "https", hostname: "static.qobuz.com" },
+      { protocol: "https", hostname: "img.radioparadise.com" },
       // EverSolo serves local album art over HTTP from the device IP
       { protocol: "http", hostname: "**" },
     ],

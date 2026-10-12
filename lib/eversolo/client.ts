@@ -107,12 +107,13 @@ export class EversoloClient {
     const pm = data.playingMusic;
     const ai = data.everSoloPlayInfo?.everSoloPlayAudioInfo;
 
-    // When a streamId is set (e.g. "qobuz"), playingMusic may hold a different
-    // track than what's actually decoding. Prefer everSoloPlayAudioInfo for
-    // metadata in that case, but keep audio format from playingMusic.
-    const isStreaming = !!pm?.streamId;
+    // Some streaming apps (notably Qobuz Connect) put the current song in
+    // everSoloPlayAudioInfo while playingMusic still refers to an old song.
+    // Radio Paradise supplies the current song in playingMusic and leaves the
+    // alternate audio info empty, so only prefer it when it has a title.
+    const useAudioInfo = !!pm?.streamId && !!ai?.songName?.trim();
 
-    if (pm?.title && !isStreaming) {
+    if (pm?.title && !useAudioInfo) {
       track = {
         title: pm.title,
         artist: pm.artist ?? "",
@@ -129,7 +130,7 @@ export class EversoloClient {
                 channels: pm.channels ?? 2,
               }
             : null,
-        source: null,
+        source: pm.streamId ?? null,
       };
     }
 
