@@ -12,7 +12,7 @@ A personal music display and discovery app. Connects to an EverSolo music player
 
 - **Now Playing** — full-bleed artist backgrounds (Fanart.tv), album art from EverSolo / Cover Art Archive, live progress bar, play/pause/skip controls, audio quality badge (FLAC · 16-bit · 44.1 kHz). Updates via Server-Sent Events.
 - **Recommendations** — scored by similarity + tag overlap, weighted by your play counts. Refreshed daily.
-- **New Releases** — albums, EPs, and singles from artists you listen to, within a configurable date window. Refreshed daily.
+- **New Releases** — albums, EPs, and singles from artists you listen to, within a configurable date window. Refreshed daily. Discover also shows whether each release is monitored or downloaded in Lidarr when configured.
 - **Artist pages** — bio, top tracks, albums with cover art, similar artists.
 
 ## Stack
@@ -41,12 +41,14 @@ Built and pushed to GHCR automatically on every merge to `main`.
 cp .env.example .env
 ```
 
-| Variable            | Where to get it                                               |
-| ------------------- | ------------------------------------------------------------- |
-| `LASTFM_API_KEY`    | https://www.last.fm/api/account/create                        |
-| `LASTFM_USERNAME`   | Your Last.FM username                                         |
-| `FANART_TV_API_KEY` | https://fanart.tv/get-an-api-key (project key, not personal)  |
-| `EVERSOLO_HOST`     | IP address of your EverSolo device (default: `192.168.1.138`) |
+| Variable            | Where to get it                                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `LASTFM_API_KEY`    | https://www.last.fm/api/account/create                                                                           |
+| `LASTFM_USERNAME`   | Your Last.FM username                                                                                            |
+| `FANART_TV_API_KEY` | https://fanart.tv/get-an-api-key (project key, not personal)                                                     |
+| `EVERSOLO_HOST`     | IP address of your EverSolo device (default: `192.168.1.138`)                                                    |
+| `LIDARR_URL`        | Optional Lidarr base URL reachable from the Encore server (for Docker on the same network: `http://lidarr:8686`) |
+| `LIDARR_API_KEY`    | Optional Lidarr API key from Settings → General; kept server-side                                                |
 
 ### 2. Run with Docker
 
@@ -95,6 +97,10 @@ Each discovery job skips if data is less than 20 hours old, so server restarts d
 | [Fanart.tv](https://fanart.tv/api-docs/music-api/)         | Artist backgrounds and thumbnails                               |
 | [Cover Art Archive](https://coverartarchive.org/)          | Album art (no key required)                                     |
 | [EverSolo](https://www.eversolo.com/)                      | Live playback state and controls via local HTTP API (port 9529) |
+
+## Lidarr in Discover
+
+Set `LIDARR_URL` and `LIDARR_API_KEY` in Encore’s server environment, then restart Encore. The New Releases cards in Discover show whether the exact MusicBrainz release group is in Lidarr, monitored, partly downloaded, or downloaded. Status is cached for two minutes; a Lidarr outage hides the status while Discover continues to work. This integration is read-only and does not add artists, monitor albums, or initiate downloads. The API key is sent only by the server to Lidarr.
 
 ## Encore Display on Android
 

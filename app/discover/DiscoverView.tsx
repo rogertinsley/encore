@@ -14,7 +14,22 @@ interface NewRelease {
   releaseType: string;
   coverArtUrl: string | null;
   playCount: number;
+  lidarrStatus:
+    | "not-tracked"
+    | "unmonitored"
+    | "monitored"
+    | "partial"
+    | "downloaded"
+    | null;
 }
+
+const LIDARR_LABELS: Record<NonNullable<NewRelease["lidarrStatus"]>, string> = {
+  "not-tracked": "Not in Lidarr",
+  unmonitored: "In Lidarr · unmonitored",
+  monitored: "Monitored in Lidarr",
+  partial: "Partly downloaded",
+  downloaded: "Downloaded",
+};
 
 interface Recommendation {
   id: string;
@@ -85,6 +100,13 @@ function ReleaseCard({ release }: { release: NewRelease }) {
           {release.title}
         </p>
         <p className="text-warm-500 text-xs truncate">{release.artistName}</p>
+        {release.lidarrStatus && (
+          <p
+            className={`text-xs ${release.lidarrStatus === "downloaded" ? "text-emerald-400" : "text-warm-500"}`}
+          >
+            {LIDARR_LABELS[release.lidarrStatus]}
+          </p>
+        )}
       </div>
     </Link>
   );
