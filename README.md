@@ -13,6 +13,7 @@ A personal music display and discovery app. Connects to an EverSolo music player
 - **Now Playing** — full-bleed artist backgrounds (Fanart.tv), album art from EverSolo / Cover Art Archive, live progress bar, play/pause/skip controls, audio quality badge (FLAC · 16-bit · 44.1 kHz). Updates via Server-Sent Events.
 - **Recommendations** — scored by similarity + tag overlap, weighted by your play counts. Refreshed daily.
 - **New Releases** — albums, EPs, and singles from artists you listen to, within a configurable date window. Refreshed daily. Discover also shows whether each release is monitored or downloaded in Lidarr when configured.
+- **The Listening Shelf** — save the current track from Display or a new release from Discover. `/shelf` keeps those picks across devices, shows their Lidarr status, and offers explicit Add or Monitor actions when Encore can identify the album. A release can be added directly when its artist already exists in Lidarr; otherwise add the artist there first. Saved radio tracks with no known album can still be kept, but cannot be sent to Lidarr until an album is identified.
 - **Artist pages** — bio, top tracks, albums with cover art, similar artists.
 
 ## Stack
@@ -49,6 +50,8 @@ cp .env.example .env
 | `EVERSOLO_HOST`     | IP address of your EverSolo device (default: `192.168.1.138`)                                                    |
 | `LIDARR_URL`        | Optional Lidarr base URL reachable from the Encore server (for Docker on the same network: `http://lidarr:8686`) |
 | `LIDARR_API_KEY`    | Optional Lidarr API key from Settings → General; kept server-side                                                |
+
+The Shelf uses the existing PostgreSQL database. Its migration runs on the next Docker startup. Lidarr actions require the optional `LIDARR_URL` and `LIDARR_API_KEY`; no new service is needed. Encore checks that browser write requests come from the same host.
 
 ### 2. Run with Docker
 

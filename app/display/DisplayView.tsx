@@ -19,6 +19,7 @@ import {
 import { DisplaySettings } from "./DisplaySettings";
 import { DisplayPanel, type DisplayPanelTab } from "./DisplayPanel";
 import styles from "./display.module.css";
+import Link from "next/link";
 
 function useClock(active: boolean) {
   const [now, setNow] = useState(() => Date.now());
@@ -186,10 +187,34 @@ export function DisplayView() {
   const [panel, setPanel] = useState<DisplayPanelTab | null>(null);
   const [idle, setIdle] = useState(false);
   const [position, setPosition] = useState(0);
+  const [shelfState, setShelfState] = useState<
+    "ready" | "saving" | "saved" | "error"
+  >("ready");
   const receivedAt = useRef(Date.now());
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null);
   const now = useClock(idle && preferences.clock);
   const key = trackIdentity(data);
+  useEffect(() => {
+    setShelfState("ready");
+  }, [key]);
+  const keepTrack = async () => {
+    if (shelfState === "saving" || shelfState === "saved") return;
+    setShelfState("saving");
+    try {
+      const response = await fetch("/api/shelf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "now-playing",
+          expectedTrackIdentity: key,
+        }),
+      });
+      if (!response.ok) throw new Error("save failed");
+      setShelfState("saved");
+    } catch {
+      setShelfState("error");
+    }
+  };
   const artwork = useRetainedArtwork(data?.albumArtUrl ?? null, key);
   const closePanel = useCallback(() => setPanel(null), []);
   useScreenWakeLock(
@@ -389,6 +414,21 @@ export function DisplayView() {
               )}
               {preferences.quality && <AudioQuality data={data} />}
               <div className={styles.detailActions}>
+                <button
+                  type="button"
+                  onClick={() => void keepTrack()}
+                  disabled={
+                    disconnected ||
+                    shelfState === "saving" ||
+                    shelfState === "saved"
+                  }
+                >
+                  {shelfState === "saved"
+                    ? "Kept ✓"
+                    : shelfState === "saving"
+                      ? "Saving…"
+                      : "＋ Keep this"}
+                </button>
                 <button type="button" onClick={() => setPanel("info")}>
                   Info
                 </button>
@@ -398,7 +438,13 @@ export function DisplayView() {
                 <button type="button" onClick={() => setPanel("queue")}>
                   Queue
                 </button>
+                <Link href="/shelf">Shelf</Link>
               </div>
+              {shelfState === "error" && (
+                <span className={styles.controlError} role="status">
+                  Could not save to Shelf
+                </span>
+              )}
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { timeAgo } from "@/lib/utils/time";
 
 interface NewRelease {
   id: string;
+  mbid: string | null;
   artistName: string;
   title: string;
   releaseDate: string;
@@ -68,37 +69,49 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 // ── New Releases ─────────────────────────────────────────────────────────────
 
-function ReleaseCard({ release }: { release: NewRelease }) {
+function ReleaseCard({
+  release,
+  saved,
+  onSave,
+}: {
+  release: NewRelease;
+  saved: boolean;
+  onSave: (id: string) => Promise<void>;
+}) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState(false);
   return (
-    <Link
-      href={`/artist/${encodeURIComponent(release.artistName)}`}
-      className="flex flex-col gap-2 group"
-    >
-      <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-warm-800">
-        {release.coverArtUrl ? (
-          <Image
-            src={release.coverArtUrl}
-            alt={release.title}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-3xl text-warm-600">♪</span>
-          </div>
-        )}
-        <span
-          className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm ${
-            TYPE_COLORS[release.releaseType] ?? "bg-warm-800/80 text-warm-400"
-          }`}
-        >
-          {release.releaseType}
-        </span>
-      </div>
+    <article className="flex flex-col gap-2 group">
+      <Link href={`/artist/${encodeURIComponent(release.artistName)}`}>
+        <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-warm-800">
+          {release.coverArtUrl ? (
+            <Image
+              src={release.coverArtUrl}
+              alt={release.title}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-3xl text-warm-600">♪</span>
+            </div>
+          )}
+          <span
+            className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm ${
+              TYPE_COLORS[release.releaseType] ?? "bg-warm-800/80 text-warm-400"
+            }`}
+          >
+            {release.releaseType}
+          </span>
+        </div>
+      </Link>
       <div className="flex flex-col gap-0.5">
-        <p className="text-warm-100 text-sm font-medium leading-tight truncate group-hover:text-white transition-colors">
+        <Link
+          href={`/artist/${encodeURIComponent(release.artistName)}`}
+          className="text-warm-100 text-sm font-medium leading-tight truncate group-hover:text-white transition-colors"
+        >
           {release.title}
-        </p>
+        </Link>
         <p className="text-warm-500 text-xs truncate">{release.artistName}</p>
         {release.lidarrStatus && (
           <p
@@ -108,18 +121,54 @@ function ReleaseCard({ release }: { release: NewRelease }) {
           </p>
         )}
       </div>
-    </Link>
+      <button
+        type="button"
+        disabled={pending || saved}
+        onClick={async () => {
+          setPending(true);
+          setError(false);
+          try {
+            await onSave(release.id);
+          } catch {
+            setError(true);
+          } finally {
+            setPending(false);
+          }
+        }}
+        className="self-start min-h-9 text-xs tracking-wide text-amber-accent hover:text-warm-100 disabled:opacity-50"
+      >
+        {saved ? "On your Shelf ✓" : pending ? "Saving…" : "＋ Keep this"}
+      </button>
+      {error && (
+        <p role="status" className="text-xs text-red-300">
+          Could not save
+        </p>
+      )}
+    </article>
   );
 }
 
-function NewReleasesSection({ releases }: { releases: NewRelease[] }) {
+function NewReleasesSection({
+  releases,
+  savedMbids,
+  onSave,
+}: {
+  releases: NewRelease[];
+  savedMbids: Set<string>;
+  onSave: (id: string) => Promise<void>;
+}) {
   if (releases.length === 0) return null;
   return (
     <section>
       <SectionHeading>New Releases</SectionHeading>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {releases.map((r) => (
-          <ReleaseCard key={r.id} release={r} />
+          <ReleaseCard
+            key={r.id}
+            release={r}
+            saved={Boolean(r.mbid && savedMbids.has(r.mbid))}
+            onSave={onSave}
+          />
         ))}
       </div>
     </section>
@@ -254,6 +303,7 @@ function RecentlyPlayedSection({ tracks }: { tracks: RecentTrack[] }) {
 export function DiscoverView() {
   const [data, setData] = useState<DiscoverData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [savedMbids, setSavedMbids] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/discover")
@@ -262,6 +312,32 @@ export function DiscoverView() {
       .catch(() => null)
       .finally(() => setLoading(false));
   }, []);
+  useEffect(() => {
+    fetch("/api/shelf")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((items: Array<{ releaseGroupMbid: string | null }>) =>
+        setSavedMbids(
+          new Set(
+            items
+              .map((item) => item.releaseGroupMbid)
+              .filter((id): id is string => Boolean(id))
+          )
+        )
+      )
+      .catch(() => null);
+  }, []);
+
+  const saveRelease = async (id: string) => {
+    const response = await fetch("/api/shelf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source: "release", releaseId: id }),
+    });
+    if (!response.ok) throw new Error("Could not save");
+    const item: { releaseGroupMbid: string | null } = await response.json();
+    if (item.releaseGroupMbid)
+      setSavedMbids((current) => new Set([...current, item.releaseGroupMbid!]));
+  };
 
   if (loading) {
     return (
@@ -283,7 +359,11 @@ export function DiscoverView() {
 
   return (
     <div className="flex flex-col gap-12">
-      <NewReleasesSection releases={data.releases} />
+      <NewReleasesSection
+        releases={data.releases}
+        savedMbids={savedMbids}
+        onSave={saveRelease}
+      />
       <RecommendationsSection recommendations={data.recommendations} />
       <RecentlyPlayedSection tracks={data.recentTracks} />
     </div>

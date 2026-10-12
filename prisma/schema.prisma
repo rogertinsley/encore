@@ -56,3 +56,18 @@ model ArtistImage {
 
   @@unique([artistId, imageType])
 }
+
+model ListeningShelfItem {
+  id               String   @id @default(cuid())
+  fingerprint      String   @unique
+  kind             String
+  artistName       String
+  title            String
+  albumName        String?
+  releaseGroupMbid String?
+  coverArtUrl      String?
+  source           String?
+  savedAt          DateTime @default(now())
+
+  @@index([savedAt])
+}
