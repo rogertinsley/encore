@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Outfit, DM_Mono } from "next/font/google";
-import { Nav } from "./components/Nav";
+import { AppChrome } from "./components/AppChrome";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -47,8 +47,7 @@ export default function RootLayout({
       className={`${cormorant.variable} ${outfit.variable} ${dmMono.variable}`}
     >
       <body className="min-h-screen">
-        <Nav />
-        <main className="px-6 py-8">{children}</main>
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   );

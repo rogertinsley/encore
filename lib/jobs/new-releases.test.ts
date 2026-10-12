@@ -23,8 +23,14 @@ import { clients } from "@/lib/clients";
 import { prisma } from "@/lib/prisma";
 import { startNewReleasesJob } from "./new-releases";
 
-const lastfm = clients.lastfm as Record<string, ReturnType<typeof vi.fn>>;
-const coverArt = clients.coverArt as Record<string, ReturnType<typeof vi.fn>>;
+const lastfm = clients.lastfm as unknown as Record<
+  string,
+  ReturnType<typeof vi.fn>
+>;
+const coverArt = clients.coverArt as unknown as Record<
+  string,
+  ReturnType<typeof vi.fn>
+>;
 const prismaMock = prisma as unknown as {
   newRelease: Record<string, ReturnType<typeof vi.fn>>;
   $transaction: ReturnType<typeof vi.fn>;
@@ -60,7 +66,7 @@ describe("startNewReleasesJob", () => {
     ]);
     // NewReleasesService will call musicBrainz internally via injected clients
     // — it finds no MBID so returns no releases; the job still runs the transaction
-    clients.musicBrainz.searchArtist.mockResolvedValue(null);
+    vi.mocked(clients.musicBrainz.searchArtist).mockResolvedValue(null);
     coverArt.getAlbumArtByReleaseGroup.mockResolvedValue(null);
 
     startNewReleasesJob();
