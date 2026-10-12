@@ -127,6 +127,35 @@ describe("EversoloClient", () => {
       });
     });
 
+    it("uses playingMusic for Radio Paradise when alternate audio info is empty", async () => {
+      mockFetch({
+        state: 3,
+        duration: 396377,
+        position: 44711,
+        playingMusic: {
+          title: "Unbroken Chain",
+          artist: "Grateful Dead",
+          album: "From The Mars Hotel",
+          albumArtBig: "https://img.radioparadise.com/covers/l/28141.jpg",
+          streamId: "radioparadise",
+          extension: "flac",
+        },
+        everSoloPlayInfo: {
+          everSoloPlayAudioInfo: { songName: "", albumUrl: "" },
+        },
+      });
+
+      const { track, playState } = await client.getState();
+      expect(playState).toBe("playing");
+      expect(track).toMatchObject({
+        title: "Unbroken Chain",
+        artist: "Grateful Dead",
+        album: "From The Mars Hotel",
+        albumArtUrl: "https://img.radioparadise.com/covers/l/28141.jpg",
+        source: "radioparadise",
+      });
+    });
+
     it("returns null track when neither path has data", async () => {
       mockFetch({ state: 0 });
 
