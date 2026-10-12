@@ -125,4 +125,75 @@ describe("NowPlayingPipeline", () => {
     // Enrichment called twice — once per track
     expect(c.lastfm.getArtistInfo).toHaveBeenCalledTimes(2);
   });
+
+  it("keeps the previous track through a brief gap during a skip", async () => {
+    vi.useFakeTimers();
+    try {
+      const c = makeClients();
+      const r = makeRedis();
+      c.eversolo.getState
+        .mockResolvedValueOnce(playingState())
+        .mockResolvedValueOnce({ track: null, playState: "idle" })
+        .mockResolvedValue({
+          track: { ...playingState().track, title: "Karma Police" },
+          playState: "playing",
+        });
+      c.lastfm.getArtistInfo.mockResolvedValue(null);
+      c.musicBrainz.searchArtist.mockResolvedValue(null);
+      c.musicBrainz.searchRelease.mockResolvedValue(null);
+      c.fanartTV.getArtistImages.mockResolvedValue(null);
+      c.coverArt.getAlbumArt.mockResolvedValue(null);
+      c.coverArt.getAlbumArtByReleaseGroup.mockResolvedValue(null);
+
+      const pipeline = createNowPlayingPipeline(c, r);
+      pipeline.start();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(r.setex).toHaveBeenCalledTimes(1);
+
+      pipeline.triggerPoll();
+      await vi.advanceTimersByTimeAsync(300);
+      expect(r.del).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(r.del).not.toHaveBeenCalled();
+      expect(JSON.parse(r.setex.mock.lastCall?.[2] as string).trackName).toBe(
+        "Karma Police"
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("clears the previous track after a genuine stop", async () => {
+    vi.useFakeTimers();
+    try {
+      const c = makeClients();
+      const r = makeRedis();
+      c.eversolo.getState
+        .mockResolvedValueOnce(playingState())
+        .mockResolvedValue({ track: null, playState: "idle" });
+      c.lastfm.getArtistInfo.mockResolvedValue(null);
+      c.musicBrainz.searchArtist.mockResolvedValue(null);
+      c.musicBrainz.searchRelease.mockResolvedValue(null);
+      c.fanartTV.getArtistImages.mockResolvedValue(null);
+      c.coverArt.getAlbumArt.mockResolvedValue(null);
+      c.coverArt.getAlbumArtByReleaseGroup.mockResolvedValue(null);
+
+      const pipeline = createNowPlayingPipeline(c, r);
+      pipeline.start();
+      await vi.advanceTimersByTimeAsync(0);
+
+      pipeline.triggerPoll();
+      await vi.advanceTimersByTimeAsync(300);
+      expect(r.del).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(r.del).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(r.del).toHaveBeenCalledWith(NOW_PLAYING_KEY);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
