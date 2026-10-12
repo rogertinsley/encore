@@ -25,16 +25,17 @@ export class NewReleasesService {
   async getNewReleases(username: string, since: Date): Promise<NewRelease[]> {
     const topArtists = await this.lastfm.getTopArtists(username, "overall");
 
-    const settled = await Promise.allSettled(
+    // A failed lookup is an incomplete refresh, not evidence that releases
+    // disappeared. Let the job keep its previous database snapshot.
+    const perArtist = await Promise.all(
       topArtists.map((artist) => this.releasesForArtist(artist, since))
     );
 
     const seen = new Set<string>();
     const releases: NewRelease[] = [];
 
-    for (const result of settled) {
-      if (result.status !== "fulfilled") continue;
-      for (const release of result.value) {
+    for (const artistReleases of perArtist) {
+      for (const release of artistReleases) {
         if (seen.has(release.mbid)) continue;
         seen.add(release.mbid);
         releases.push(release);

@@ -26,7 +26,15 @@ jobs:
 
       - run: npm ci
 
+      - run: npx prisma generate
+
       - run: npm run test:run
+
+      - run: npm run lint
+
+      - run: npx tsc --noEmit
+
+      - run: npm run build
 
   build-and-push:
     name: Build & Push

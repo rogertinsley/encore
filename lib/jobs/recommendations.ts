@@ -3,7 +3,8 @@ import { recommend } from "@/lib/recommendations/engine";
 import { prisma } from "@/lib/prisma";
 import { startJob, isStale } from "@/lib/jobs/runner";
 
-const JOB_INTERVAL_MS = 24 * 60 * 60 * 1000;
+// isStale prevents normal refreshes; an hourly check retries failed refreshes.
+const JOB_INTERVAL_MS = 60 * 60 * 1000;
 const MAX_ARTISTS = 20;
 
 async function runRecommendationsJob(): Promise<void> {
@@ -28,8 +29,8 @@ async function runRecommendationsJob(): Promise<void> {
   const enriched = await Promise.all(
     slice.map(async (artist) => {
       const [similar, info] = await Promise.all([
-        lastfm.getSimilarArtists(artist.name).catch(() => []),
-        lastfm.getArtistInfo(artist.name).catch(() => null),
+        lastfm.getSimilarArtists(artist.name),
+        lastfm.getArtistInfo(artist.name),
       ]);
       if (!info) {
         console.warn(
@@ -39,13 +40,6 @@ async function runRecommendationsJob(): Promise<void> {
       return { artist: { ...artist, tags: info?.tags ?? [] }, similar };
     })
   );
-
-  const degraded = enriched.filter((e) => !e.similar.length).length;
-  if (degraded > 0) {
-    console.warn(
-      `[RecommendationsJob] ${degraded}/${slice.length} artists have no similar artists (Last.FM may be degraded)`
-    );
-  }
 
   const topArtistsWithTags = enriched.map((e) => e.artist);
   const similarArtistsMap = Object.fromEntries(

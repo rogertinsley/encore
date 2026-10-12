@@ -74,4 +74,24 @@ describe("startNewReleasesJob", () => {
 
     expect(prismaMock.$transaction).toHaveBeenCalledOnce();
   });
+
+  it("preserves saved releases when MusicBrainz fails", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    prismaMock.newRelease.findFirst.mockResolvedValue({
+      createdAt: new Date(0),
+    });
+    lastfm.getTopArtists.mockResolvedValue([
+      { name: "Radiohead", playCount: 500, rank: 1 },
+    ]);
+    vi.mocked(clients.musicBrainz.searchArtist).mockRejectedValue(
+      new Error("MusicBrainz unavailable")
+    );
+
+    startNewReleasesJob();
+    await vi.waitFor(() => expect(errorLog).toHaveBeenCalled());
+
+    expect(prismaMock.newRelease.deleteMany).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    errorLog.mockRestore();
+  });
 });

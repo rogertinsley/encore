@@ -75,4 +75,26 @@ describe("startRecommendationsJob", () => {
     expect(lastfm.getTopArtists).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
+
+  it("preserves saved recommendations when similar artists fail", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    prismaMock.recommendation.findFirst.mockResolvedValue({
+      createdAt: new Date(0),
+    });
+    lastfm.getTopArtists.mockResolvedValue([
+      { name: "Radiohead", playCount: 500, rank: 1 },
+    ]);
+    lastfm.getTopTags.mockResolvedValue([]);
+    lastfm.getSimilarArtists.mockRejectedValue(
+      new Error("Last.FM unavailable")
+    );
+    lastfm.getArtistInfo.mockResolvedValue(null);
+
+    startRecommendationsJob();
+    await vi.waitFor(() => expect(errorLog).toHaveBeenCalled());
+
+    expect(prismaMock.recommendation.deleteMany).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    errorLog.mockRestore();
+  });
 });

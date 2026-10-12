@@ -2,7 +2,9 @@ const BASE_URL = "https://coverartarchive.org";
 
 export class CoverArtArchiveClient {
   private async fetchFrontArt(path: string): Promise<string | null> {
-    const response = await fetch(`${BASE_URL}${path}`);
+    const response = await fetch(`${BASE_URL}${path}`, {
+      signal: AbortSignal.timeout(8_000),
+    });
     if (!response.ok) return null;
     const data = (await response.json()) as {
       images: Array<{ front: boolean; image: string }>;

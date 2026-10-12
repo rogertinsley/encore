@@ -3,7 +3,8 @@ import { NewReleasesService } from "@/lib/new-releases/service";
 import { prisma } from "@/lib/prisma";
 import { startJob, isStale } from "@/lib/jobs/runner";
 
-const JOB_INTERVAL_MS = 24 * 60 * 60 * 1000;
+// isStale prevents normal refreshes; an hourly check retries failed refreshes.
+const JOB_INTERVAL_MS = 60 * 60 * 1000;
 
 function sinceDate(): Date {
   const days = parseInt(process.env.NEW_RELEASES_DAYS_WINDOW ?? "90", 10);

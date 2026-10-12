@@ -129,4 +129,24 @@ describe("NewReleasesService", () => {
 
     expect(releases.map((r) => r.artistName)).toEqual(["Radiohead", "Blur"]);
   });
+
+  it("rejects an incomplete refresh when any artist lookup fails", async () => {
+    const lastfm = makeLastFM([
+      { name: "Radiohead", playCount: 1000, rank: 1 },
+      { name: "Blur", playCount: 500, rank: 2 },
+    ]);
+    const musicBrainz = makeMusicBrainz({ Radiohead: "mbid-rh" }, {});
+    musicBrainz.searchArtist.mockImplementation((name: string) =>
+      name === "Blur"
+        ? Promise.reject(new Error("upstream offline"))
+        : Promise.resolve("mbid-rh")
+    );
+
+    await expect(
+      new NewReleasesService(lastfm, musicBrainz).getNewReleases(
+        "testuser",
+        SINCE
+      )
+    ).rejects.toThrow("upstream offline");
+  });
 });

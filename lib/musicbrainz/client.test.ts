@@ -92,19 +92,16 @@ describe("MusicBrainzClient", () => {
       expect(releases).toEqual([]);
     });
 
-    it("returns empty array on API error", async () => {
+    it("propagates API errors so a refresh cannot erase saved releases", async () => {
       vi.spyOn(global, "fetch").mockResolvedValueOnce({
         ok: false,
         status: 503,
         json: async () => ({}),
       } as Response);
 
-      const releases = await client.getRecentReleases(
-        "artist-mbid",
-        new Date("2024-01-01")
-      );
-
-      expect(releases).toEqual([]);
+      await expect(
+        client.getRecentReleases("artist-mbid", new Date("2024-01-01"))
+      ).rejects.toThrow("MusicBrainz API error: 503");
     });
   });
 

@@ -14,7 +14,6 @@ export function useNowPlaying() {
     const connect = () => {
       source?.close();
       source = new EventSource("/api/now-playing/stream");
-      source.onopen = () => setConnection("connected");
       source.onerror = () => setConnection("disconnected");
       source.onmessage = (event: MessageEvent<string>) => {
         try {

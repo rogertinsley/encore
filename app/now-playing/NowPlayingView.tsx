@@ -7,6 +7,10 @@ import type { EnrichedNowPlaying } from "@/lib/enrichment/now-playing";
 import type { Lyrics, LyricLine } from "@/lib/lrclib/client";
 import type { PlayQueue } from "@/lib/eversolo/client";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
+import {
+  sendPlaybackControl,
+  type PlaybackAction,
+} from "@/lib/eversolo/send-control";
 
 const CROSSFADE_MS = 800;
 
@@ -92,20 +96,14 @@ function formatTime(ms: number): string {
   return `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
-async function sendControl(action: string) {
-  await fetch("/api/eversolo/control", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action }),
-  });
-}
-
 function PlayerControls({
   playState,
 }: {
   playState: "playing" | "paused" | "idle";
 }) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const optimisticTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Optimistic: flip immediately on click, SSE corrects within ~300ms
   const [optimisticState, setOptimisticState] = useState<
     "playing" | "paused" | "idle" | null
@@ -115,61 +113,83 @@ function PlayerControls({
   // Clear optimistic state once SSE confirms the real state
   useEffect(() => {
     setOptimisticState(null);
+    if (optimisticTimer.current) clearTimeout(optimisticTimer.current);
   }, [playState]);
+  useEffect(
+    () => () => {
+      if (optimisticTimer.current) clearTimeout(optimisticTimer.current);
+    },
+    []
+  );
 
-  const control = async (action: string) => {
+  const control = async (action: PlaybackAction) => {
     if (busy) return;
     setBusy(true);
+    setError("");
     if (action === "playOrPause") {
       setOptimisticState(displayState === "playing" ? "paused" : "playing");
     }
     try {
-      await sendControl(action);
+      await sendPlaybackControl(action);
+      optimisticTimer.current = setTimeout(
+        () => setOptimisticState(null),
+        4_000
+      );
+    } catch {
+      setOptimisticState(null);
+      setError("Player did not respond");
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="flex items-center gap-5 shrink-0">
-      <button
-        onClick={() => control("playLast")}
-        disabled={busy}
-        className="text-white/70 hover:text-white transition-colors disabled:opacity-40"
-        aria-label="Previous"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
-        </svg>
-      </button>
-
-      <button
-        onClick={() => control("playOrPause")}
-        disabled={busy}
-        className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-zinc-900 hover:bg-zinc-200 transition-colors disabled:opacity-40 shrink-0"
-        aria-label={displayState === "playing" ? "Pause" : "Play"}
-      >
-        {displayState === "playing" ? (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+    <div className="flex flex-col items-center shrink-0">
+      <div className="flex items-center gap-5">
+        <button
+          onClick={() => control("playLast")}
+          disabled={busy}
+          className="text-white/70 hover:text-white transition-colors disabled:opacity-40"
+          aria-label="Previous"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
           </svg>
-        ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        )}
-      </button>
+        </button>
 
-      <button
-        onClick={() => control("playNext")}
-        disabled={busy}
-        className="text-white/70 hover:text-white transition-colors disabled:opacity-40"
-        aria-label="Next"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 3.93V8.07L8.5 12zM16 6h2v12h-2z" />
-        </svg>
-      </button>
+        <button
+          onClick={() => control("playOrPause")}
+          disabled={busy}
+          className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-zinc-900 hover:bg-zinc-200 transition-colors disabled:opacity-40 shrink-0"
+          aria-label={displayState === "playing" ? "Pause" : "Play"}
+        >
+          {displayState === "playing" ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+
+        <button
+          onClick={() => control("playNext")}
+          disabled={busy}
+          className="text-white/70 hover:text-white transition-colors disabled:opacity-40"
+          aria-label="Next"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 3.93V8.07L8.5 12zM16 6h2v12h-2z" />
+          </svg>
+        </button>
+      </div>
+      {error && (
+        <p className="text-xs text-amber-300 mt-1" role="status">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

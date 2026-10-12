@@ -38,6 +38,7 @@ export class MusicBrainzClient {
     }
     const response = await fetch(url.toString(), {
       headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(8_000),
     });
     if (!response.ok)
       throw new Error(`MusicBrainz API error: ${response.status}`);
@@ -45,34 +46,30 @@ export class MusicBrainzClient {
   }
 
   async getRecentReleases(mbid: string, since: Date): Promise<Release[]> {
-    try {
-      const data = await this.fetch<{
-        "release-groups": Array<{
-          id: string;
-          title: string;
-          "first-release-date": string;
-          "primary-type": string;
-        }>;
-      }>("/release-group", {
-        artist: mbid,
-        type: "album|single|ep",
-        limit: "100",
-      });
+    const data = await this.fetch<{
+      "release-groups": Array<{
+        id: string;
+        title: string;
+        "first-release-date": string;
+        "primary-type": string;
+      }>;
+    }>("/release-group", {
+      artist: mbid,
+      type: "album|single|ep",
+      limit: "100",
+    });
 
-      return data["release-groups"]
-        .filter((rg) => {
-          const releaseDate = new Date(rg["first-release-date"]);
-          return !isNaN(releaseDate.getTime()) && releaseDate >= since;
-        })
-        .map((rg) => ({
-          mbid: rg.id,
-          title: rg.title,
-          date: rg["first-release-date"],
-          type: rg["primary-type"],
-        }));
-    } catch {
-      return [];
-    }
+    return data["release-groups"]
+      .filter((rg) => {
+        const releaseDate = new Date(rg["first-release-date"]);
+        return !isNaN(releaseDate.getTime()) && releaseDate >= since;
+      })
+      .map((rg) => ({
+        mbid: rg.id,
+        title: rg.title,
+        date: rg["first-release-date"],
+        type: rg["primary-type"],
+      }));
   }
 
   async getReleaseGroupYear(mbid: string): Promise<number | null> {

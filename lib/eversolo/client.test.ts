@@ -224,7 +224,7 @@ describe("EversoloClient", () => {
 
       expect(spy).toHaveBeenCalledWith(
         "http://192.168.1.1:9529/ZidooMusicControl/v2/playOrPause",
-        { method: "POST" }
+        { method: "POST", signal: expect.any(AbortSignal) }
       );
     });
 
