@@ -8,6 +8,7 @@ const POLL_MS = 500;
 export async function GET() {
   const encoder = new TextEncoder();
   let intervalId: ReturnType<typeof setInterval> | undefined;
+  let heartbeatId: ReturnType<typeof setInterval> | undefined;
   let lastJson = "";
 
   const stream = new ReadableStream({
@@ -35,9 +36,17 @@ export async function GET() {
 
       void poll();
       intervalId = setInterval(poll, POLL_MS);
+      heartbeatId = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(": heartbeat\n\n"));
+        } catch {
+          /* disconnected */
+        }
+      }, 15_000);
     },
     cancel() {
       clearInterval(intervalId);
+      clearInterval(heartbeatId);
     },
   });
 

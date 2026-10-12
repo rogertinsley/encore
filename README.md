@@ -95,3 +95,18 @@ Each job skips if data is less than 20 hours old, so server restarts don't trigg
 | [Fanart.tv](https://fanart.tv/api-docs/music-api/)         | Artist backgrounds and thumbnails                               |
 | [Cover Art Archive](https://coverartarchive.org/)          | Album art (no key required)                                     |
 | [EverSolo](https://www.eversolo.com/)                      | Live playback state and controls via local HTTP API (port 9529) |
+
+## Encore Display on Android
+
+1. Connect the Pixel to the home network or Tailscale and open `https://encore.rogertinsley.com/display` in Chrome.
+2. Open Chrome's menu and choose **Install app** (or **Add to Home screen**, if Chrome offers installation there). Confirm installation.
+3. Launch **Encore** from its own home-screen icon. It starts directly on `/display`.
+4. Mount the phone horizontally. To change the layout or idle behavior, tap the discreet menu in the upper-right corner or long-press the display. Preferences are stored only in that browser's local storage.
+
+The installed app requests fullscreen display mode and falls back to standalone where fullscreen is unavailable. A normal Chrome tab still shows browser controls. A plain website shortcut may also open in Chrome instead of the installed app; use **Install app** when available. Chrome and Android decide how much system UI remains visible. The layout follows device rotation automatically; the layout setting changes Encore's arrangement but cannot lock Android orientation.
+
+While playing, the display shows artwork and live progress. When paused, the track stays visible for the chosen idle timeout (default two minutes), then becomes mostly black. When playback stops, the idle screen appears immediately. The optional clock moves slowly to avoid a fixed bright mark. The wake lock option is off by default and requests that Android keep the screen awake only while music is playing and Encore is visible; Android may deny it. Encore's dim appearance does **not** lower physical screen brightness. Set brightness, screen timeout, charging limits and any battery optimisation on the Pixel itself.
+
+The display needs a live connection to Encore. It does not cache playback data for offline use, so it cannot show an old track as live. An interrupted SSE connection is labelled and reconnects automatically. The existing server poller keeps running independently of the phone. No new service, database or environment variable is required.
+
+Encore currently has no login layer: access to the private home network/Tailscale is its access boundary. The command endpoint rejects cross-origin browser posts, but **any client that can reach Encore can send playback commands**. Keep the site restricted to trusted network members; add authentication before exposing it publicly.

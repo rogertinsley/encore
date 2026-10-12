@@ -26,7 +26,10 @@ import { clients } from "@/lib/clients";
 import { prisma } from "@/lib/prisma";
 import { startRecommendationsJob } from "./recommendations";
 
-const lastfm = clients.lastfm as Record<string, ReturnType<typeof vi.fn>>;
+const lastfm = clients.lastfm as unknown as Record<
+  string,
+  ReturnType<typeof vi.fn>
+>;
 const prismaMock = prisma as unknown as {
   recommendation: Record<string, ReturnType<typeof vi.fn>>;
   $transaction: ReturnType<typeof vi.fn>;

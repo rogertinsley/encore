@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { EnrichedNowPlaying } from "@/lib/enrichment/now-playing";
 import type { Lyrics, LyricLine } from "@/lib/lrclib/client";
 import type { PlayQueue } from "@/lib/eversolo/client";
+import { useNowPlaying } from "@/hooks/useNowPlaying";
 
 const CROSSFADE_MS = 800;
 
@@ -466,7 +467,7 @@ function NowPlayingCard({
       setDisplayMs(startPos + (Date.now() - startedAt));
     }, 250);
     return () => clearInterval(id);
-  }, [data?.positionMs, data?.playState]);
+  }, [data]);
 
   if (!data) {
     return (
@@ -603,9 +604,8 @@ function NowPlayingCard({
 }
 
 export function NowPlayingView() {
-  const [latest, setLatest] = useState<EnrichedNowPlaying | null>(null);
+  const { data: latest, connection } = useNowPlaying();
   const [displayed, setDisplayed] = useState<EnrichedNowPlaying | null>(null);
-  const [loading, setLoading] = useState(true);
   const [fading, setFading] = useState(false);
   const [lyrics, setLyrics] = useState<Lyrics | null>(null);
   const [queue, setQueue] = useState<PlayQueue | null>(null);
@@ -660,23 +660,15 @@ export function NowPlayingView() {
     };
   }, [displayed]);
 
-  useEffect(() => {
-    const es = new EventSource("/api/now-playing/stream");
-
-    es.onmessage = (event: MessageEvent<string>) => {
-      const json: EnrichedNowPlaying | null = JSON.parse(event.data);
-      setLatest(json);
-      setLoading(false);
-    };
-
-    return () => {
-      es.close();
+  useEffect(
+    () => () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
-    if (loading) return;
+    if (connection === "loading") return;
 
     const incoming = trackId(latest);
 
@@ -697,9 +689,9 @@ export function NowPlayingView() {
       setDisplayed(latest);
       setFading(false);
     }, CROSSFADE_MS);
-  }, [latest, loading]);
+  }, [latest, connection]);
 
-  if (loading) {
+  if (connection === "loading" && shownIdRef.current === null) {
     return (
       <div className="fixed inset-0 z-10 flex items-center justify-center bg-warm-950">
         <p className="text-warm-500 text-sm animate-pulse tracking-wide">
