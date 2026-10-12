@@ -52,6 +52,8 @@ interface ZidooPlayingMusic {
   channels?: number;
   albumArtBig?: string;
   albumArt?: string;
+  coverArt?: string;
+  coverUrl?: string;
   /** Present when playing from a streaming source (e.g. "qobuz"). */
   streamId?: string;
 }
@@ -62,6 +64,11 @@ interface ZidooAudioInfo {
   albumName?: string;
   albumArt?: string;
   albumUrl?: string;
+  coverArt?: string;
+}
+
+function firstArtwork(...candidates: (string | undefined)[]): string | null {
+  return candidates.find((value) => value?.trim())?.trim() ?? null;
 }
 
 interface ZidooStateResponse {
@@ -93,6 +100,12 @@ export class EversoloClient {
     this.baseUrl = `http://${host}:9529`;
   }
 
+  private artworkUrl(value: string | null): string | null {
+    if (!value) return null;
+    if (value.startsWith("/")) return `${this.baseUrl}${value}`;
+    return value;
+  }
+
   async getState(): Promise<EversoloState> {
     const res = await fetch(`${this.baseUrl}/ZidooMusicControl/v2/getState`, {
       signal: AbortSignal.timeout(5_000),
@@ -114,15 +127,27 @@ export class EversoloClient {
     // Radio Paradise supplies the current song in playingMusic and leaves the
     // alternate audio info empty, so only prefer it when it has a title.
     const useAudioInfo = !!pm?.streamId && !!ai?.songName?.trim();
+    const sameTitle =
+      !!pm?.title &&
+      ai?.songName?.trim().toLowerCase() === pm.title.trim().toLowerCase();
 
-    if (pm?.title && !useAudioInfo) {
+    if (pm?.title?.trim() && !useAudioInfo) {
       track = {
         title: pm.title,
         artist: pm.artist ?? "",
         album: pm.album ?? "",
         durationMs: data.duration ?? 0,
         positionMs: data.position ?? 0,
-        albumArtUrl: pm.albumArtBig ?? pm.albumArt ?? null,
+        albumArtUrl: this.artworkUrl(
+          firstArtwork(
+            pm.albumArtBig,
+            pm.albumArt,
+            pm.coverArt,
+            pm.coverUrl,
+            sameTitle ? ai?.albumUrl : undefined,
+            sameTitle ? ai?.albumArt : undefined
+          )
+        ),
         audioFormat:
           pm.extension || pm.sampleRate
             ? {
@@ -136,7 +161,7 @@ export class EversoloClient {
       };
     }
 
-    if (!track && ai?.songName) {
+    if (!track && ai?.songName?.trim()) {
       track = {
         title: ai.songName,
         artist: ai.artistName ?? "",
@@ -144,7 +169,9 @@ export class EversoloClient {
         durationMs: data.duration ?? 0,
         positionMs: data.position ?? 0,
         // Use everSoloPlayAudioInfo art — playingMusic art belongs to a different track
-        albumArtUrl: ai.albumUrl ?? ai.albumArt ?? null,
+        albumArtUrl: this.artworkUrl(
+          firstArtwork(ai.albumUrl, ai.albumArt, ai.coverArt)
+        ),
         audioFormat:
           pm?.extension || pm?.sampleRate
             ? {

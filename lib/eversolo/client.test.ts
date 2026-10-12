@@ -156,6 +156,47 @@ describe("EversoloClient", () => {
       });
     });
 
+    it("uses another artwork field when the preferred field is blank", async () => {
+      mockFetch({
+        state: 3,
+        playingMusic: {
+          title: "Radio Song",
+          streamId: "radioparadise",
+          albumArtBig: "",
+          albumArt: "https://img.radioparadise.com/cover.jpg",
+        },
+      });
+      expect((await client.getState()).track?.albumArtUrl).toBe(
+        "https://img.radioparadise.com/cover.jpg"
+      );
+    });
+
+    it("resolves device-relative cover URLs on the server", async () => {
+      mockFetch({
+        state: 3,
+        playingMusic: { title: "Local Song", coverUrl: "/cover/123.jpg" },
+      });
+      expect((await client.getState()).track?.albumArtUrl).toBe(
+        "http://192.168.1.1:9529/cover/123.jpg"
+      );
+    });
+
+    it("uses alternate art only when it belongs to the same track", async () => {
+      mockFetch({
+        state: 3,
+        playingMusic: { title: "Radio Song" },
+        everSoloPlayInfo: {
+          everSoloPlayAudioInfo: {
+            songName: "Radio Song",
+            albumUrl: "https://example.com/same-song.jpg",
+          },
+        },
+      });
+      expect((await client.getState()).track?.albumArtUrl).toBe(
+        "https://example.com/same-song.jpg"
+      );
+    });
+
     it("returns null track when neither path has data", async () => {
       mockFetch({ state: 0 });
 

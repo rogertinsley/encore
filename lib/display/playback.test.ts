@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { EnrichedNowPlaying } from "@/lib/enrichment/now-playing";
-import { formatTime, playbackPosition, trackIdentity } from "./playback";
+import {
+  formatTime,
+  isLivePlayback,
+  playbackPosition,
+  trackIdentity,
+} from "./playback";
 
 const track = (
   overrides: Partial<EnrichedNowPlaying> = {}
@@ -42,6 +47,14 @@ describe("display playback", () => {
     expect(trackIdentity(track())).not.toBe(
       trackIdentity(track({ albumName: "Other" }))
     );
+    expect(trackIdentity(track())).not.toBe(
+      trackIdentity(track({ source: "radioparadise" }))
+    );
     expect(trackIdentity(null)).toBe("__idle__");
+  });
+  it("identifies live radio and streams without duration", () => {
+    expect(isLivePlayback(track({ source: "radioparadise" }))).toBe(true);
+    expect(isLivePlayback(track({ durationMs: 0 }))).toBe(true);
+    expect(isLivePlayback(track())).toBe(false);
   });
 });
