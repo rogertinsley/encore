@@ -1,36 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
+import { createScreenWakeLockController } from "@/lib/display/screen-wake-lock";
 
 export function useScreenWakeLock(enabled: boolean) {
   useEffect(() => {
     if (!enabled || !("wakeLock" in navigator)) return;
-    let sentinel: WakeLockSentinel | null = null;
-    let disposed = false;
-    const acquire = async () => {
-      if (disposed || document.visibilityState !== "visible" || sentinel)
-        return;
-      try {
-        const acquired = await navigator.wakeLock.request("screen");
-        if (disposed) void acquired.release();
-        else sentinel = acquired;
-      } catch {
-        // Permission, battery and platform restrictions are expected.
-      }
-    };
+    const controller = createScreenWakeLockController(
+      navigator.wakeLock,
+      () => document.visibilityState === "visible"
+    );
     const onVisibility = () => {
-      if (document.visibilityState === "visible") void acquire();
-      else {
-        void sentinel?.release();
-        sentinel = null;
-      }
+      if (document.visibilityState === "visible") void controller.acquire();
+      else controller.release();
     };
-    void acquire();
+    void controller.acquire();
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      disposed = true;
       document.removeEventListener("visibilitychange", onVisibility);
-      void sentinel?.release();
+      controller.dispose();
     };
   }, [enabled]);
 }

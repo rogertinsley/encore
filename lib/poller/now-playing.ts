@@ -3,7 +3,7 @@ import type { LastFMClient } from "@/lib/lastfm/client";
 import type { MusicBrainzClient } from "@/lib/musicbrainz/client";
 import type { FanartTVClient } from "@/lib/fanart/client";
 import type { CoverArtArchiveClient } from "@/lib/coverart/client";
-import type { EversoloClient } from "@/lib/eversolo/client";
+import type { EversoloClient, EversoloTrack } from "@/lib/eversolo/client";
 
 export const NOW_PLAYING_KEY = "now-playing";
 const POLL_INTERVAL_MS = 3_000;
@@ -33,8 +33,8 @@ export interface NowPlayingPipeline {
   triggerPoll(): void;
 }
 
-function trackKey(artist: string, title: string): string {
-  return `${artist}:::${title}`;
+function trackKey(track: EversoloTrack): string {
+  return JSON.stringify([track.artist, track.title, track.album, track.source]);
 }
 
 export function createNowPlayingPipeline(
@@ -47,6 +47,10 @@ export function createNowPlayingPipeline(
   let cachedEnrichment: Awaited<ReturnType<typeof enrichNowPlaying>> | null =
     null;
   let idleSince: number | null = null;
+  let generation = 0;
+  let polling = false;
+  let pollQueued = false;
+  let started = false;
 
   const poll = async (): Promise<void> => {
     try {
@@ -60,33 +64,55 @@ export function createNowPlayingPipeline(
         idleSince = null;
         cachedTrackKey = null;
         cachedEnrichment = null;
+        generation++;
         await redis.del(NOW_PLAYING_KEY);
         return;
       }
 
       idleSince = null;
-      const key = trackKey(track.artist, track.title);
+      const key = trackKey(track);
 
-      if (key !== cachedTrackKey || !cachedEnrichment) {
+      if (key !== cachedTrackKey) {
+        cachedTrackKey = key;
+        cachedEnrichment = null;
+        const thisGeneration = ++generation;
         const nowPlayingTrack = {
           trackName: track.title,
           artistName: track.artist,
           albumName: track.album || null,
           albumMbid: null,
         };
-        cachedEnrichment = await enrichNowPlaying(
+        void enrichNowPlaying(
           nowPlayingTrack,
           lastfm,
           musicBrainz,
           fanartTV,
           coverArt
-        );
-        cachedTrackKey = key;
+        )
+          .then((result) => {
+            if (cachedTrackKey === key && generation === thisGeneration) {
+              cachedEnrichment = result;
+            }
+          })
+          .catch((err) => {
+            console.error("[NowPlayingPoller] enrichment failed:", err);
+          });
       }
 
+      // Publish device metadata immediately. External enrichment is included
+      // on later polls only if it still belongs to this exact track.
+      const metadata = cachedEnrichment ?? {
+        trackName: track.title,
+        artistName: track.artist,
+        albumName: track.album || null,
+        albumMbid: null,
+        artistImages: null,
+        albumArtUrl: null,
+        bio: null,
+      };
       const data = {
-        ...cachedEnrichment,
-        albumArtUrl: track.albumArtUrl ?? cachedEnrichment.albumArtUrl,
+        ...metadata,
+        albumArtUrl: track.albumArtUrl ?? metadata.albumArtUrl,
         positionMs: track.positionMs,
         durationMs: track.durationMs,
         playState,
@@ -121,6 +147,7 @@ export function createNowPlayingPipeline(
         idleSince = null;
         cachedTrackKey = null;
         cachedEnrichment = null;
+        generation++;
         await redis.del(NOW_PLAYING_KEY).catch(() => null);
       } else {
         console.error("[NowPlayingPoller] poll failed:", err);
@@ -128,13 +155,30 @@ export function createNowPlayingPipeline(
     }
   };
 
+  const requestPoll = (): void => {
+    if (polling) {
+      pollQueued = true;
+      return;
+    }
+    polling = true;
+    void poll().finally(() => {
+      polling = false;
+      if (pollQueued) {
+        pollQueued = false;
+        requestPoll();
+      }
+    });
+  };
+
   return {
     start() {
-      void poll();
-      setInterval(poll, POLL_INTERVAL_MS);
+      if (started) return;
+      started = true;
+      requestPoll();
+      setInterval(requestPoll, POLL_INTERVAL_MS);
     },
     triggerPoll() {
-      setTimeout(() => void poll(), 300);
+      setTimeout(requestPoll, 300);
     },
   };
 }

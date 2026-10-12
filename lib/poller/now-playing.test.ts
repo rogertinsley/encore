@@ -196,4 +196,147 @@ describe("NowPlayingPipeline", () => {
       vi.useRealTimers();
     }
   });
+
+  it("publishes basic Eversolo metadata before enrichment completes", async () => {
+    vi.useFakeTimers();
+    try {
+      const c = makeClients();
+      const r = makeRedis();
+      let resolveInfo!: (value: { bio: string }) => void;
+      c.eversolo.getState.mockResolvedValue(playingState());
+      c.lastfm.getArtistInfo.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveInfo = resolve;
+          })
+      );
+      c.musicBrainz.searchArtist.mockResolvedValue(null);
+      c.musicBrainz.searchRelease.mockResolvedValue(null);
+
+      createNowPlayingPipeline(c, r).start();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(r.setex).toHaveBeenCalledOnce();
+      expect(JSON.parse(r.setex.mock.lastCall?.[2] as string)).toMatchObject({
+        trackName: "Creep",
+        bio: null,
+      });
+
+      resolveInfo({ bio: "Radiohead are a band." });
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(JSON.parse(r.setex.mock.lastCall?.[2] as string).bio).toBe(
+        "Radiohead are a band."
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("serializes overlapping polls so the newer track is published last", async () => {
+    vi.useFakeTimers();
+    try {
+      const c = makeClients();
+      const r = makeRedis();
+      let resolveFirst!: (value: ReturnType<typeof playingState>) => void;
+      c.eversolo.getState
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveFirst = resolve;
+            })
+        )
+        .mockResolvedValue({
+          ...playingState(),
+          track: { ...playingState().track, title: "Karma Police" },
+        });
+      c.lastfm.getArtistInfo.mockResolvedValue(null);
+      c.musicBrainz.searchArtist.mockResolvedValue(null);
+      c.musicBrainz.searchRelease.mockResolvedValue(null);
+
+      const pipeline = createNowPlayingPipeline(c, r);
+      pipeline.start();
+      pipeline.triggerPoll();
+      await vi.advanceTimersByTimeAsync(3_300);
+      expect(c.eversolo.getState).toHaveBeenCalledTimes(1);
+
+      resolveFirst(playingState());
+      await vi.advanceTimersByTimeAsync(0);
+      expect(c.eversolo.getState).toHaveBeenCalledTimes(2);
+      expect(JSON.parse(r.setex.mock.lastCall?.[2] as string).trackName).toBe(
+        "Karma Police"
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("treats the same song on a different album as a new track", async () => {
+    vi.useFakeTimers();
+    try {
+      const c = makeClients();
+      const r = makeRedis();
+      c.eversolo.getState
+        .mockResolvedValueOnce(playingState())
+        .mockResolvedValue({
+          ...playingState(),
+          track: { ...playingState().track, album: "Live Album" },
+        });
+      c.lastfm.getArtistInfo.mockResolvedValue(null);
+      c.musicBrainz.searchArtist.mockResolvedValue(null);
+      c.musicBrainz.searchRelease.mockResolvedValue(null);
+
+      const pipeline = createNowPlayingPipeline(c, r);
+      pipeline.start();
+      await vi.advanceTimersByTimeAsync(0);
+      pipeline.triggerPoll();
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(c.lastfm.getArtistInfo).toHaveBeenCalledTimes(2);
+      expect(JSON.parse(r.setex.mock.lastCall?.[2] as string).albumName).toBe(
+        "Live Album"
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("discards enrichment that finishes after the track has changed", async () => {
+    vi.useFakeTimers();
+    try {
+      const c = makeClients();
+      const r = makeRedis();
+      let resolveOld!: (value: { bio: string }) => void;
+      c.eversolo.getState
+        .mockResolvedValueOnce(playingState())
+        .mockResolvedValue({
+          ...playingState(),
+          track: { ...playingState().track, title: "Karma Police" },
+        });
+      c.lastfm.getArtistInfo
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveOld = resolve;
+            })
+        )
+        .mockResolvedValue({ bio: "Current artist bio" });
+      c.musicBrainz.searchArtist.mockResolvedValue(null);
+      c.musicBrainz.searchRelease.mockResolvedValue(null);
+
+      const pipeline = createNowPlayingPipeline(c, r);
+      pipeline.start();
+      await vi.advanceTimersByTimeAsync(0);
+      pipeline.triggerPoll();
+      await vi.advanceTimersByTimeAsync(300);
+      resolveOld({ bio: "Stale artist bio" });
+      await vi.advanceTimersByTimeAsync(3_000);
+
+      expect(JSON.parse(r.setex.mock.lastCall?.[2] as string)).toMatchObject({
+        trackName: "Karma Police",
+        bio: "Current artist bio",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

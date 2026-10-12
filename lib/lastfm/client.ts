@@ -42,7 +42,9 @@ export class LastFMClient {
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
     }
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), {
+      signal: AbortSignal.timeout(8_000),
+    });
     if (!response.ok) {
       throw new Error(`Last.FM API error: ${response.status}`);
     }

@@ -94,7 +94,9 @@ export class EversoloClient {
   }
 
   async getState(): Promise<EversoloState> {
-    const res = await fetch(`${this.baseUrl}/ZidooMusicControl/v2/getState`);
+    const res = await fetch(`${this.baseUrl}/ZidooMusicControl/v2/getState`, {
+      signal: AbortSignal.timeout(5_000),
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as ZidooStateResponse;
 
@@ -201,6 +203,7 @@ export class EversoloClient {
   async control(action: ControlAction): Promise<void> {
     const res = await fetch(`${this.baseUrl}/ZidooMusicControl/v2/${action}`, {
       method: "POST",
+      signal: AbortSignal.timeout(5_000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   }

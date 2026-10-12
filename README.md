@@ -81,10 +81,10 @@ npm run db:generate  # regenerate Prisma client after schema changes
 Background jobs start automatically when the server boots (`instrumentation.ts`):
 
 - **Now-playing poller** — every 3s, polls EverSolo for playback state, enriches on track change (Last.FM bio, Fanart.tv artist images, Cover Art Archive album art), writes to Redis
-- **Recommendations job** — daily, writes to `Recommendation` table
-- **New releases job** — daily, writes to `NewRelease` table
+- **Recommendations job** — checks hourly, refreshes stale data in the `Recommendation` table, and retains the last successful snapshot if a provider fails
+- **New releases job** — checks hourly, refreshes stale data in the `NewRelease` table, and retains the last successful snapshot if a provider fails
 
-Each job skips if data is less than 20 hours old, so server restarts don't trigger redundant API calls.
+Each discovery job skips if data is less than 20 hours old, so server restarts don't trigger redundant API calls. Failed refreshes are retried on the next hourly check.
 
 ## External APIs
 

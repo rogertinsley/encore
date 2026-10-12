@@ -11,6 +11,10 @@ import {
   trackIdentity,
 } from "@/lib/display/playback";
 import type { EnrichedNowPlaying } from "@/lib/enrichment/now-playing";
+import {
+  sendPlaybackControl,
+  type PlaybackAction,
+} from "@/lib/eversolo/send-control";
 import { DisplaySettings } from "./DisplaySettings";
 import styles from "./display.module.css";
 
@@ -46,19 +50,14 @@ function PlaybackControls({
     },
     []
   );
-  const command = async (action: "playLast" | "playOrPause" | "playNext") => {
+  const command = async (action: PlaybackAction) => {
     if (pending) return;
     setPending(true);
     setError("");
     if (action === "playOrPause")
       setOptimistic(shown === "playing" ? "paused" : "playing");
     try {
-      const response = await fetch("/api/eversolo/control", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-      if (!response.ok) throw new Error("Command failed");
+      await sendPlaybackControl(action);
       optimisticTimer.current = setTimeout(() => setOptimistic(null), 4_000);
     } catch {
       setOptimistic(null);

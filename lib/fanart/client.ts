@@ -10,7 +10,9 @@ export class FanartTVClient {
   constructor(private readonly apiKey: string) {}
 
   async getArtistImages(mbid: string): Promise<ArtistImages | null> {
-    const response = await fetch(`${BASE_URL}/${mbid}?api_key=${this.apiKey}`);
+    const response = await fetch(`${BASE_URL}/${mbid}?api_key=${this.apiKey}`, {
+      signal: AbortSignal.timeout(8_000),
+    });
 
     if (!response.ok) return null;
 
