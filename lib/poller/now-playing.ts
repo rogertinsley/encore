@@ -8,6 +8,9 @@ import type { EversoloClient } from "@/lib/eversolo/client";
 export const NOW_PLAYING_KEY = "now-playing";
 const POLL_INTERVAL_MS = 3_000;
 const CACHE_TTL_SECONDS = 30;
+// The Eversolo briefly reports no track while switching songs. Keep the last
+// track on screen through that gap, but still clear it after a genuine stop.
+const IDLE_GRACE_MS = 5_000;
 
 type PipelineClients = {
   eversolo: Pick<EversoloClient, "getState">;
@@ -43,18 +46,25 @@ export function createNowPlayingPipeline(
   let cachedTrackKey: string | null = null;
   let cachedEnrichment: Awaited<ReturnType<typeof enrichNowPlaying>> | null =
     null;
+  let idleSince: number | null = null;
 
   const poll = async (): Promise<void> => {
     try {
       const { track, playState } = await eversolo.getState();
 
       if (!track || playState === "idle") {
+        if (cachedTrackKey) {
+          idleSince ??= Date.now();
+          if (Date.now() - idleSince < IDLE_GRACE_MS) return;
+        }
+        idleSince = null;
         cachedTrackKey = null;
         cachedEnrichment = null;
         await redis.del(NOW_PLAYING_KEY);
         return;
       }
 
+      idleSince = null;
       const key = trackKey(track.artist, track.title);
 
       if (key !== cachedTrackKey || !cachedEnrichment) {
@@ -108,6 +118,7 @@ export function createNowPlayingPipeline(
         "ENOTFOUND",
       ].includes(code ?? "");
       if (deviceUnreachable) {
+        idleSince = null;
         cachedTrackKey = null;
         cachedEnrichment = null;
         await redis.del(NOW_PLAYING_KEY).catch(() => null);
