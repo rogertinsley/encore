@@ -288,7 +288,8 @@
   gap: 4px;
   margin-top: clamp(5px, 1.2vh, 12px);
 }
-.detailActions button {
+.detailActions button,
+.detailActions a {
   min-width: 58px;
   min-height: 42px;
   border: 0;
@@ -299,9 +300,15 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 .detailActions button:hover,
-.detailActions button:focus-visible {
+.detailActions button:focus-visible,
+.detailActions a:hover,
+.detailActions a:focus-visible {
   background: #ffffff1c;
   color: #fff;
 }
@@ -768,7 +775,8 @@
   .detailActions {
     margin-top: 0;
   }
-  .detailActions button {
+  .detailActions button,
+  .detailActions a {
     min-height: 34px;
   }
   .panel {

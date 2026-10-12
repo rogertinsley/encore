@@ -7,6 +7,7 @@ const links = [
   { href: "/now-playing", label: "Now Playing" },
   { href: "/display", label: "Display" },
   { href: "/discover", label: "Discover" },
+  { href: "/shelf", label: "Shelf" },
   { href: "/history", label: "History" },
   { href: "/editorial", label: "Editorial" },
   { href: "/analytics", label: "Analytics" },
