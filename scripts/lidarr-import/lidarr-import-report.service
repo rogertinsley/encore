@@ -1,0 +1,6 @@
+[Unit]
+Description=Retag and retry verified Lidarr imports
+[Service]
+Type=oneshot
+ExecStart=%h/.local/share/lidarr-import-report/venv/bin/python %h/.local/share/lidarr-import-report/report.py
+TimeoutStartSec=10min
