@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LIDARR_WEB_URL } from "@/lib/lidarr/releases";
 import { DisplayView } from "./DisplayView";
 
 export const metadata: Metadata = {
@@ -11,6 +12,13 @@ export const metadata: Metadata = {
   },
 };
 
+export const dynamic = "force-dynamic";
+
 export default function DisplayPage() {
-  return <DisplayView />;
+  return (
+    <DisplayView
+      lidarrConfigured={Boolean(process.env.LIDARR_API_KEY)}
+      lidarrUrl={LIDARR_WEB_URL}
+    />
+  );
 }

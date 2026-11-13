@@ -1,5 +1,6 @@
 "use client";
 
+import { LidarrAction } from "./LidarrAction";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
@@ -180,7 +181,13 @@ function AudioQuality({ data }: { data: EnrichedNowPlaying }) {
   );
 }
 
-export function DisplayView() {
+export function DisplayView({
+  lidarrConfigured,
+  lidarrUrl,
+}: {
+  lidarrConfigured: boolean;
+  lidarrUrl: string;
+}) {
   const { data, connection } = useNowPlaying();
   const { preferences, setPreferences } = useDisplayPreferences();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -440,6 +447,15 @@ export function DisplayView() {
                 </button>
                 <Link href="/shelf">Shelf</Link>
               </div>
+              {data.artistName && (
+                <LidarrAction
+                  key={key}
+                  trackKey={key}
+                  disconnected={disconnected}
+                  lidarrUrl={lidarrUrl}
+                  configured={lidarrConfigured}
+                />
+              )}
               {shelfState === "error" && (
                 <span className={styles.controlError} role="status">
                   Could not save to Shelf

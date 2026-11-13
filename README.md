@@ -51,7 +51,7 @@ cp .env.example .env
 | `LIDARR_URL`        | Optional Lidarr base URL reachable from the Encore server (for Docker on the same network: `http://lidarr:8686`) |
 | `LIDARR_API_KEY`    | Optional Lidarr API key from Settings → General; kept server-side                                                |
 
-The Shelf uses the existing PostgreSQL database. Its migration runs on the next Docker startup. Lidarr actions require the optional `LIDARR_URL` and `LIDARR_API_KEY`; no new service is needed. Encore checks that browser write requests come from the same host.
+The Shelf uses the existing PostgreSQL database. Its migration runs on the next Docker startup. Lidarr actions require `LIDARR_API_KEY`. Set `LIDARR_URL` to override the default server at `https://lidarr.rogertinsley.com`. Encore checks that browser write requests come from the same host.
 
 ### 2. Run with Docker
 
@@ -100,6 +100,10 @@ Each discovery job skips if data is less than 20 hours old, so server restarts d
 | [Fanart.tv](https://fanart.tv/api-docs/music-api/)         | Artist backgrounds and thumbnails                               |
 | [Cover Art Archive](https://coverartarchive.org/)          | Album art (no key required)                                     |
 | [EverSolo](https://www.eversolo.com/)                      | Live playback state and controls via local HTTP API (port 9529) |
+
+## Lidarr in Display
+
+Use **Add artist & search albums** to send the current artist to Lidarr. New artists use the profiles on the sole configured music folder and start with all eligible albums monitored. For artists already in Lidarr, Encore queues a search for missing monitored albums. Use **Open Lidarr** if you need to choose between matching artists or music folders.
 
 ## Lidarr in Discover
 
