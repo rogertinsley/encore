@@ -1,0 +1,8 @@
+[Unit]
+Description=Sync Encore new releases to Lidarr
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker exec -i encore node -
+StandardInput=file:%h/.local/share/encore-lidarr-releases/sync.cjs
+TimeoutStartSec=10min
