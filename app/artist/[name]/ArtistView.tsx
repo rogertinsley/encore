@@ -192,53 +192,56 @@ export function ArtistView({ artistName }: { artistName: string }) {
             Albums
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {data.topAlbums.map((album) => (
-              <div key={album.name} className="flex flex-col gap-1.5">
-                <div className="aspect-square rounded-lg overflow-hidden bg-warm-800">
-                  {album.coverArtUrl ? (
-                    <Image
-                      src={album.coverArtUrl}
-                      alt={album.name}
-                      width={200}
-                      height={200}
-                      className="object-cover w-full h-full"
+            {data.topAlbums.map((album) => {
+              const match = lidarr?.topAlbums.find(
+                (item) => item.name === album.name
+              );
+              const mbid = match?.lidarrMbid ?? album.mbid;
+              return (
+                <div key={album.name} className="flex flex-col gap-1.5">
+                  <div className="aspect-square rounded-lg overflow-hidden bg-warm-800">
+                    {album.coverArtUrl ? (
+                      <Image
+                        src={album.coverArtUrl}
+                        alt={album.name}
+                        width={200}
+                        height={200}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-3xl text-warm-600">♪</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-warm-200 truncate">{album.name}</p>
+                  {album.year && (
+                    <p className="font-mono text-xs text-warm-300">
+                      {album.year}
+                    </p>
+                  )}
+                  {mbid ? (
+                    <ReleaseAction
+                      mbid={mbid}
+                      path={
+                        data.lidarrConfigured && !lidarrLoading
+                          ? `/api/releases/${mbid}/lidarr`
+                          : null
+                      }
+                      status={match?.lidarrStatus ?? null}
+                      releaseDate={album.year?.toString()}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-3xl text-warm-600">♪</span>
-                    </div>
+                    <Link
+                      className="min-h-9 text-sm text-amber-accent hover:underline"
+                      href={`/discover?album=${encodeURIComponent(album.name)}`}
+                    >
+                      Find album in Explore
+                    </Link>
                   )}
                 </div>
-                <p className="text-xs text-warm-200 truncate">{album.name}</p>
-                {album.year && (
-                  <p className="font-mono text-xs text-warm-300">
-                    {album.year}
-                  </p>
-                )}
-                {album.mbid ? (
-                  <ReleaseAction
-                    mbid={album.mbid}
-                    path={
-                      data.lidarrConfigured
-                        ? `/api/releases/${album.mbid}/lidarr`
-                        : null
-                    }
-                    status={
-                      lidarr?.topAlbums.find((item) => item.mbid === album.mbid)
-                        ?.lidarrStatus ?? null
-                    }
-                    releaseDate={album.year?.toString()}
-                  />
-                ) : (
-                  <Link
-                    className="min-h-9 text-sm text-amber-accent hover:underline"
-                    href={`/discover?album=${encodeURIComponent(album.name)}`}
-                  >
-                    Find album in Explore
-                  </Link>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}

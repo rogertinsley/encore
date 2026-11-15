@@ -57,6 +57,29 @@ export function findShelfAlbum(
   );
 }
 
+export function resolveArtistAlbumMbid(
+  albums: Map<string, LidarrAlbum> | null,
+  album: { mbid: string | null; name: string },
+  artistMbid: string | null
+): string | null {
+  const original = album.mbid || null;
+  if (
+    !albums ||
+    !artistMbid ||
+    (original && albums.has(original.toLowerCase()))
+  ) {
+    return original;
+  }
+  const matches = [...albums.values()].filter(
+    (candidate) =>
+      candidate.artist?.foreignArtistId?.toLowerCase() ===
+        artistMbid.toLowerCase() && sameName(candidate.title, album.name)
+  );
+  return matches.length === 1
+    ? (matches[0].foreignAlbumId ?? original)
+    : original;
+}
+
 export async function monitorShelfAlbum(album: LidarrAlbum): Promise<void> {
   if (!album.id) throw new Error("Album has no Lidarr ID");
   await lidarrRequest("api/v1/album/monitor", "PUT", {

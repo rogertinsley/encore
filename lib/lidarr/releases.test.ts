@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getLidarrAlbums,
   requestReleaseSearch,
+  resolveArtistAlbumMbid,
   statusForRelease,
 } from "./releases";
 
@@ -183,4 +184,41 @@ describe("Lidarr new-release status", () => {
       ["/api/v1/command", { name: "AlbumSearch", albumIds: [17] }],
     ]);
   });
+});
+
+it("reconciles alternate album IDs only for a unique album by the same artist", () => {
+  const album = { name: "Mr. Beast", mbid: "lastfm-release" };
+  const artist = { foreignArtistId: "mogwai" };
+  const library = new Map([
+    [
+      "release-group",
+      { title: album.name, artist, foreignAlbumId: "release-group" },
+    ],
+    [
+      "other-artist",
+      {
+        title: album.name,
+        artist: { foreignArtistId: "other" },
+        foreignAlbumId: "other-artist",
+      },
+    ],
+  ]);
+
+  expect(resolveArtistAlbumMbid(library, album, "mogwai")).toBe(
+    "release-group"
+  );
+  expect(resolveArtistAlbumMbid(library, album, null)).toBe(album.mbid);
+  library.set("another-edition", {
+    title: album.name,
+    artist,
+    foreignAlbumId: "another-edition",
+  });
+  expect(resolveArtistAlbumMbid(library, album, "mogwai")).toBe(album.mbid);
+  expect(
+    resolveArtistAlbumMbid(
+      library,
+      { ...album, mbid: "release-group" },
+      "mogwai"
+    )
+  ).toBe("release-group");
 });

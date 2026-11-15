@@ -26,10 +26,10 @@ interface SearchCommand {
   body?: { albumIds?: number[] };
 }
 
-export async function getReleaseProgress() {
+export async function getReleaseProgress(albumsPromise = getLidarrAlbums()) {
   if (!process.env.LIDARR_API_KEY) return () => null;
   const [albums, queue, commands] = await Promise.all([
-    getLidarrAlbums(),
+    albumsPromise,
     readRedisSnapshot("lidarr:queue:v1", LIVE_PROGRESS, async () => {
       const data = (await lidarrRequest(
         "api/v1/queue?page=1&pageSize=250"
