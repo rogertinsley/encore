@@ -70,7 +70,18 @@ describe("getArtistPageData", () => {
     expect(data.mbid).toBe("mbid-from-mb");
   });
 
-  it("returns null artistImages when MusicBrainz finds no MBID", async () => {
+  it("loads artwork using the Last.fm artist ID without a MusicBrainz search", async () => {
+    const data = await getArtistPageData("Radiohead", mockClients, "testuser");
+
+    expect(data.artistImages?.background).toBe("http://example.com/bg.jpg");
+    expect(mockClients.fanartTV.getArtistImages).toHaveBeenCalledWith(
+      "mbid-rh"
+    );
+    expect(mockClients.musicBrainz.searchArtist).not.toHaveBeenCalled();
+  });
+
+  it("returns null artistImages when neither service supplies an MBID", async () => {
+    mockClients.lastfm.getArtistInfo.mockResolvedValue(null);
     mockClients.musicBrainz.searchArtist.mockResolvedValue(null);
 
     const data = await getArtistPageData(
@@ -136,7 +147,7 @@ describe("getArtistPageData", () => {
     const data = await getArtistPageData("Radiohead", mockClients, "testuser");
 
     expect(data.topTracks).toEqual([]);
-    expect(data.artistImages).toBeNull();
+    expect(data.artistImages?.background).toBe("http://example.com/bg.jpg");
   });
 
   it("filters out Last.FM placeholder imageUrl when CoverArt returns null", async () => {

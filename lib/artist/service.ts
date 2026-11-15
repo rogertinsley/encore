@@ -35,15 +35,16 @@ export async function getArtistPageData(
   { lastfm, musicBrainz, fanartTV, coverArt }: Clients,
   username: string
 ): Promise<ArtistPageData> {
-  const [artistInfo, topTracks, topAlbums, similarArtists, mbid] =
-    await Promise.all([
-      lastfm.getArtistInfo(artistName, username).catch(() => null),
-      lastfm.getTopTracks(artistName, 10).catch(() => []),
-      lastfm.getTopAlbums(artistName, 12).catch(() => []),
-      lastfm.getSimilarArtists(artistName).catch(() => []),
-      musicBrainz.searchArtist(artistName).catch(() => null),
-    ]);
+  const [artistInfo, topTracks, topAlbums, similarArtists] = await Promise.all([
+    lastfm.getArtistInfo(artistName, username).catch(() => null),
+    lastfm.getTopTracks(artistName, 10).catch(() => []),
+    lastfm.getTopAlbums(artistName, 12).catch(() => []),
+    lastfm.getSimilarArtists(artistName).catch(() => []),
+  ]);
 
+  const mbid =
+    artistInfo?.mbid ||
+    (await musicBrainz.searchArtist(artistName).catch(() => null));
   const artistImages = mbid
     ? await fanartTV.getArtistImages(mbid).catch(() => null)
     : null;
@@ -72,7 +73,7 @@ export async function getArtistPageData(
 
   return {
     name: artistInfo?.name ?? artistName,
-    mbid: artistInfo?.mbid ?? mbid,
+    mbid,
     bio: artistInfo?.bio ?? null,
     tags: artistInfo?.tags ?? [],
     listeners: artistInfo?.listeners ?? 0,
