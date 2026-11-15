@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getLidarrAlbums, statusForRelease } from "./releases";
+import {
+  getLidarrAlbums,
+  requestReleaseSearch,
+  statusForRelease,
+} from "./releases";
 
 const mbid = "A2A2D638-ACD1-4BAE-BFA2-3BC23942E7FE";
 
@@ -48,5 +52,60 @@ describe("Lidarr new-release status", () => {
       "X-Api-Key": "test-key",
     });
     expect(await getLidarrAlbums()).toBe(first);
+  });
+
+  it("monitors an upcoming release without sending a search command", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ id: 17, foreignAlbumId: mbid, monitored: false }],
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      requestReleaseSearch({
+        mbid,
+        title: "In Rainbows",
+        artistName: "Radiohead",
+        releaseDate: new Date(Date.now() + 86_400_000),
+      })
+    ).resolves.toMatch(/Monitored/);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0].pathname).toBe("/api/v1/album/monitor");
+    expect(fetchMock.mock.calls[1][1].method).toBe("PUT");
+  });
+
+  it("collapses concurrent requests into one search for a released album", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ id: 17, foreignAlbumId: mbid, monitored: true }],
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 37 }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const release = {
+      mbid,
+      title: "In Rainbows",
+      artistName: "Radiohead",
+      releaseDate: new Date("2007-10-10"),
+    };
+
+    await Promise.all([
+      requestReleaseSearch(release),
+      requestReleaseSearch(release),
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[2][1].body).toBe(
+      JSON.stringify({
+        name: "AlbumSearch",
+        albumIds: [17],
+      })
+    );
   });
 });

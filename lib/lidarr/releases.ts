@@ -2,6 +2,15 @@
 import { sameName } from "@/lib/shelf";
 export const LIDARR_WEB_URL = "https://lidarr.rogertinsley.com";
 
+export class LidarrReleaseActionError extends Error {
+  constructor(
+    message: string,
+    readonly status: 409 | 502 = 409
+  ) {
+    super(message);
+  }
+}
+
 export type LidarrReleaseStatus =
   | "not-tracked"
   | "unmonitored"
@@ -84,7 +93,7 @@ export async function addShelfAlbum(
   releaseGroupMbid: string,
   artistName: string,
   albumName: string
-): Promise<void> {
+): Promise<LidarrAlbum> {
   const lookup = await lidarrRequest(
     `api/v1/album/lookup?term=lidarr:${encodeURIComponent(releaseGroupMbid)}`
   );
@@ -99,7 +108,8 @@ export async function addShelfAlbum(
       sameName((value as LidarrAlbum).artist?.artistName, artistName)
     )
   );
-  if (!match) throw new Error("Lidarr could not verify this release");
+  if (!match)
+    throw new LidarrReleaseActionError("Lidarr could not verify this release");
   const artists = await lidarrRequest("api/v1/artist");
   const artist = Array.isArray(artists)
     ? artists.find(
@@ -112,23 +122,33 @@ export async function addShelfAlbum(
       )
     : null;
   if (!artist?.id)
-    throw new Error("Add this artist in Lidarr before adding the album");
-  await lidarrRequest("api/v1/album", "POST", {
+    throw new LidarrReleaseActionError(
+      "Add this artist in Lidarr before adding the album"
+    );
+  const added = (await lidarrRequest("api/v1/album", "POST", {
     ...match,
     id: 0,
     artistId: artist.id,
     artist,
     monitored: true,
     addOptions: { searchForNewAlbum: false },
-  });
+  })) as LidarrAlbum;
   cachedAlbums = null;
   cacheUntil = 0;
+  return added;
 }
 
 let cachedAlbums: Map<string, LidarrAlbum> | null = null;
 let cacheUntil = 0;
 let pending: Promise<Map<string, LidarrAlbum> | null> | null = null;
 const CACHE_MS = 2 * 60 * 1000;
+
+function hasAllTracks(album: LidarrAlbum): boolean {
+  const files = album.statistics?.trackFileCount ?? 0;
+  const total = album.statistics?.trackCount ?? 0;
+  const percent = album.statistics?.percentOfTracks ?? 0;
+  return files > 0 && (percent >= 100 || (total > 0 && files >= total));
+}
 
 export function statusForRelease(
   releaseGroupMbid: string | null,
@@ -139,14 +159,94 @@ export function statusForRelease(
     : undefined;
   if (!album) return "not-tracked";
 
-  const files = album.statistics?.trackFileCount ?? 0;
-  const total = album.statistics?.trackCount ?? 0;
-  const percent = album.statistics?.percentOfTracks ?? 0;
-  if (files > 0 && (percent >= 100 || (total > 0 && files >= total))) {
-    return "downloaded";
-  }
-  if (files > 0) return "partial";
+  if (hasAllTracks(album)) return "downloaded";
+  if ((album.statistics?.trackFileCount ?? 0) > 0) return "partial";
   return album.monitored ? "monitored" : "unmonitored";
+}
+
+interface RequestedRelease {
+  mbid: string;
+  artistName: string;
+  title: string;
+  releaseDate: Date;
+}
+
+interface AlbumSearchCommand {
+  name: string;
+  status: string;
+  body?: { albumIds?: number[] };
+}
+
+const pendingReleaseSearches = new Map<string, Promise<string>>();
+
+async function monitorAndSearchRelease(
+  release: RequestedRelease
+): Promise<string> {
+  const mbid = release.mbid.toLowerCase();
+  const albums = (await lidarrRequest(
+    `api/v1/album?foreignAlbumId=${encodeURIComponent(mbid)}`
+  )) as LidarrAlbum[];
+  const existing = albums.find(
+    (album) => album.foreignAlbumId?.toLowerCase() === mbid
+  );
+  if (existing && hasAllTracks(existing)) {
+    return "Already imported in Lidarr";
+  }
+
+  const album =
+    existing ?? (await addShelfAlbum(mbid, release.artistName, release.title));
+  if (existing && !existing.monitored) await monitorShelfAlbum(existing);
+  if (release.releaseDate.getTime() > Date.now()) {
+    return "Monitored in Lidarr for release day";
+  }
+  const albumId = album.id;
+  if (!albumId)
+    throw new LidarrReleaseActionError(
+      "Lidarr did not return an album ID",
+      502
+    );
+
+  try {
+    const commands = (await lidarrRequest(
+      "api/v1/command"
+    )) as AlbumSearchCommand[];
+    if (
+      commands.some(
+        (command) =>
+          command.name === "AlbumSearch" &&
+          (command.status === "queued" || command.status === "started") &&
+          command.body?.albumIds?.includes(albumId)
+      )
+    ) {
+      return "An album search is already queued or running";
+    }
+    await lidarrRequest("api/v1/command", "POST", {
+      name: "AlbumSearch",
+      albumIds: [albumId],
+    });
+  } catch {
+    throw new LidarrReleaseActionError(
+      "Monitored in Lidarr. The search could not be verified. Try again.",
+      502
+    );
+  }
+  return "Monitored in Lidarr. Album search queued";
+}
+
+export async function requestReleaseSearch(
+  release: RequestedRelease
+): Promise<string> {
+  const key = release.mbid.toLowerCase();
+  const running = pendingReleaseSearches.get(key);
+  if (running) return running;
+
+  const request = monitorAndSearchRelease(release);
+  pendingReleaseSearches.set(key, request);
+  try {
+    return await request;
+  } finally {
+    pendingReleaseSearches.delete(key);
+  }
 }
 
 async function fetchAlbums(): Promise<Map<string, LidarrAlbum> | null> {

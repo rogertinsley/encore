@@ -9,6 +9,7 @@ interface WeeklyRun {
   finishedAt: string;
   failed: boolean;
   added: string[];
+  addedArtists?: string[];
   searched: string[];
   issues: string[];
   commandId?: number;
@@ -119,9 +120,10 @@ export default async function ActivityPage() {
         </p>
         {run && (
           <>
-            <div className="mt-5 grid grid-cols-2 gap-4 sm:max-w-lg sm:grid-cols-3">
+            <div className="mt-5 grid grid-cols-2 gap-4 sm:max-w-2xl sm:grid-cols-4">
               {[
-                [run.added.length, "Added"],
+                [run.addedArtists?.length ?? 0, "Artists added"],
+                [run.added.length, "Releases added"],
                 [
                   run.searched.length,
                   run.commandId ? "Sent for search" : "Selected for search",
@@ -147,6 +149,7 @@ export default async function ActivityPage() {
             )}
             {(
               [
+                ["Artists added and sent for search", run.addedArtists ?? []],
                 ["Releases added", run.added],
                 ["Search targets", run.searched],
                 ["Issues", run.issues],

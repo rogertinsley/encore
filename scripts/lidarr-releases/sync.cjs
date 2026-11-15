@@ -1,4 +1,7 @@
 const releaseWindow = 90 * 86400000;
+const encore = "http://localhost:3567";
+const artistLimit = 3;
+const artistLookupLimit = 10;
 const dryRun = process.argv.includes("--dry-run");
 const normalize = (name) =>
   name
@@ -34,13 +37,14 @@ function lidarr(path, method = "GET", body) {
 const run = {
   startedAt: new Date().toISOString(),
   added: [],
+  addedArtists: [],
   searched: [],
   issues: [],
 };
 
-async function main() {
+async function syncReleases() {
   const [{ releases }, artists, albums] = await Promise.all([
-    getJson("http://localhost:3567/api/new-releases"),
+    getJson(encore + "/api/new-releases"),
     lidarr("artist"),
     lidarr("album"),
   ]);
@@ -116,13 +120,73 @@ async function main() {
   }
 }
 
+async function syncRecommendedArtists() {
+  const [{ recommendations }, artists] = await Promise.all([
+    getJson(encore + "/api/recommendations"),
+    lidarr("artist"),
+  ]);
+  const known = new Set(artists.map((artist) => normalize(artist.artistName)));
+  let attempts = 0;
+  for (const recommendation of recommendations) {
+    if (attempts >= artistLookupLimit || run.addedArtists.length >= artistLimit)
+      break;
+
+    const name = recommendation.artistName;
+    const normalized = normalize(name);
+    if (!normalized || known.has(normalized)) continue;
+    known.add(normalized);
+    attempts++;
+
+    if (dryRun) {
+      console.log("Would check artist", name);
+      if (attempts >= artistLimit) break;
+      continue;
+    }
+
+    try {
+      const response = await fetch(
+        encore +
+          "/api/recommendations/" +
+          encodeURIComponent(recommendation.id) +
+          "/lidarr",
+        {
+          method: "POST",
+          redirect: "error",
+          headers: { Origin: encore, "Content-Type": "application/json" },
+          body: JSON.stringify({ onlyIfNew: true }),
+          signal: AbortSignal.timeout(30000),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        run.issues.push(
+          name + " · " + (result.message || `HTTP ${response.status}`)
+        );
+        console.warn(name, result.message || response.status);
+        if (response.status >= 500) process.exitCode = 1;
+        continue;
+      }
+      if (result.added) {
+        run.addedArtists.push(name);
+        console.log("Artist added and search requested", name);
+      }
+    } catch (error) {
+      run.issues.push(name + " · " + error.message);
+      console.error(name, error.message);
+      process.exitCode = 1;
+    }
+  }
+}
+
 async function execute() {
-  try {
-    await main();
-  } catch (error) {
-    run.issues.push(error.message);
-    process.exitCode = 1;
-    console.error(error.message);
+  for (const sync of [syncReleases, syncRecommendedArtists]) {
+    try {
+      await sync();
+    } catch (error) {
+      run.issues.push(error.message);
+      process.exitCode = 1;
+      console.error(error.message);
+    }
   }
 
   if (dryRun) return;

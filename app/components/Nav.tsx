@@ -29,6 +29,8 @@ export function Nav() {
       <nav className="flex flex-wrap items-center gap-x-7 gap-y-2">
         <Link
           href="/"
+          aria-label="Encore music magazine"
+          aria-current={pathname === "/" ? "page" : undefined}
           className={`font-display text-[1.35rem] font-light tracking-[0.08em] mr-2 shrink-0 transition-opacity hover:opacity-80 ${
             isNowPlaying ? "text-white" : "text-warm-100"
           }`}

@@ -2,7 +2,9 @@
 
 The job uses Encore's new-release feed, which combines Last.fm listening history with MusicBrainz releases. It checks albums, EPs, and singles within 90 days either side of the run date for artists already in Lidarr. It adds missing releases by MusicBrainz release-group ID and searches for released, monitored items that lack tracks. Upcoming additions are monitored and eligible for a search once released. Existing unmonitored entries retain their setting.
 
-On Endor, install these files from this directory as the user with Docker access.
+Each weekly run also checks up to ten ranked Encore recommendations that are absent from Lidarr. It adds up to three artists with an exact identity match and requests searches for their monitored albums. Artists already in Lidarr are skipped. Ambiguous and failed lookups appear in the run summary. A dry run lists up to three candidates without adding artists, changing releases, or recording a run.
+
+On Endor, deploy the Encore version that includes the recommendation-to-Lidarr endpoint, then install these files from this directory as the user with Docker access.
 
 ```sh
 install -d ~/.local/share/encore-lidarr-releases ~/.config/systemd/user
