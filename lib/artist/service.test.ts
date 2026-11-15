@@ -11,6 +11,7 @@ const mockClients = {
   musicBrainz: {
     searchArtist: vi.fn(),
     lookupCatalogRelease: vi.fn(),
+    findArtistAlbum: vi.fn(),
   },
   fanartTV: {
     getArtistImages: vi.fn(),
@@ -200,5 +201,36 @@ describe("getArtistPageData", () => {
 
     expect(data.artistImages).toBeNull();
     expect(data.mbid).toBe("mbid-rh"); // MBID still populated
+  });
+});
+
+it("loads the artist before album metadata and resolves a remaster during enrichment", async () => {
+  mockClients.lastfm.getTopAlbums.mockResolvedValue([
+    { name: "A Moment of Stillness (2011 Remastered Edition)", mbid: null },
+  ]);
+  mockClients.musicBrainz.findArtistAlbum.mockResolvedValue({
+    mbid: "group",
+    releaseDate: "2006-01-01",
+  });
+  const basic = await getArtistPageData(
+    "God Is An Astronaut",
+    mockClients,
+    "test",
+    false
+  );
+  expect(basic.topAlbums[0].releaseGroupMbid).toBeNull();
+  expect(mockClients.musicBrainz.findArtistAlbum).not.toHaveBeenCalled();
+  const full = await getArtistPageData(
+    "God Is An Astronaut",
+    mockClients,
+    "test"
+  );
+  expect(mockClients.musicBrainz.findArtistAlbum).toHaveBeenCalledWith(
+    "A Moment of Stillness",
+    "mbid-rh"
+  );
+  expect(full.topAlbums[0]).toMatchObject({
+    releaseGroupMbid: "group",
+    year: 2006,
   });
 });

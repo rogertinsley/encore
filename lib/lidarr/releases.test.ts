@@ -78,7 +78,7 @@ describe("Lidarr new-release status", () => {
         artistName: "Radiohead",
         releaseDate: new Date(Date.now() + 86_400_000),
       })
-    ).resolves.toMatch(/Monitored/);
+    ).resolves.toMatchObject({ status: "monitored" });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][0].pathname).toBe("/api/v1/album/monitor");
@@ -165,7 +165,7 @@ describe("Lidarr new-release status", () => {
         artistName: artist.artistName,
         releaseDate: new Date("2007-10-10"),
       })
-    ).resolves.toContain("Album search queued");
+    ).resolves.toMatchObject({ status: "queued" });
 
     const writes = fetchMock.mock.calls
       .filter(([, options]) => options.method !== "GET")

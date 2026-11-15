@@ -51,12 +51,12 @@ export async function POST(
         { status: 409 }
       );
     }
-    return NextResponse.json({
-      message: await requestReleaseSearch({
+    return NextResponse.json(
+      await requestReleaseSearch({
         ...release,
         releaseDate: new Date(release.releaseDate ?? 0),
-      }),
-    });
+      })
+    );
   } catch (error) {
     return NextResponse.json(
       {

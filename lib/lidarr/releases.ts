@@ -1,3 +1,4 @@
+import { baseAlbumTitle } from "@/lib/album-title";
 /** MusicBrainz release-group status and explicit Lidarr album actions. */
 import { sameName } from "@/lib/shelf";
 import { lidarrRequest } from "./client";
@@ -73,7 +74,8 @@ export function resolveArtistAlbumMbid(
   const matches = [...albums.values()].filter(
     (candidate) =>
       candidate.artist?.foreignArtistId?.toLowerCase() ===
-        artistMbid.toLowerCase() && sameName(candidate.title, album.name)
+        artistMbid.toLowerCase() &&
+      sameName(candidate.title, baseAlbumTitle(album.name))
   );
   return matches.length === 1
     ? (matches[0].foreignAlbumId ?? original)
@@ -189,11 +191,16 @@ interface AlbumSearchCommand {
   body?: { albumIds?: number[] };
 }
 
-const pendingReleaseSearches = new Map<string, Promise<string>>();
+type ReleaseSearchResult = {
+  message: string;
+  status: "queued" | "monitored" | "downloaded";
+};
+
+const pendingReleaseSearches = new Map<string, Promise<ReleaseSearchResult>>();
 
 async function monitorAndSearchRelease(
   release: RequestedRelease
-): Promise<string> {
+): Promise<ReleaseSearchResult> {
   const mbid = release.mbid.toLowerCase();
   const albums = (await lidarrRequest(
     `api/v1/album?foreignAlbumId=${encodeURIComponent(mbid)}`
@@ -202,7 +209,7 @@ async function monitorAndSearchRelease(
     (album) => album.foreignAlbumId?.toLowerCase() === mbid
   );
   if (existing && hasAllTracks(existing)) {
-    return "Already imported in Lidarr";
+    return { message: "Already imported in Lidarr", status: "downloaded" };
   }
 
   const album =
@@ -210,7 +217,10 @@ async function monitorAndSearchRelease(
     (await addShelfAlbum(mbid, release.artistName, release.title, true));
   if (existing && !existing.monitored) await monitorShelfAlbum(existing);
   if (release.releaseDate.getTime() > Date.now()) {
-    return "Monitored in Lidarr for release day";
+    return {
+      message: "Monitored in Lidarr for release day",
+      status: "monitored",
+    };
   }
   const albumId = album.id;
   if (!albumId)
@@ -231,7 +241,10 @@ async function monitorAndSearchRelease(
           command.body?.albumIds?.includes(albumId)
       )
     ) {
-      return "An album search is already queued or running";
+      return {
+        message: "An album search is already queued or running",
+        status: "queued",
+      };
     }
     await lidarrRequest("api/v1/command", "POST", {
       name: "AlbumSearch",
@@ -243,12 +256,15 @@ async function monitorAndSearchRelease(
       502
     );
   }
-  return "Monitored in Lidarr. Album search queued";
+  return {
+    message: "Monitored in Lidarr. Album search queued",
+    status: "queued",
+  };
 }
 
 export async function requestReleaseSearch(
   release: RequestedRelease
-): Promise<string> {
+): Promise<ReleaseSearchResult> {
   const key = release.mbid.toLowerCase();
   const running = pendingReleaseSearches.get(key);
   if (running) return running;

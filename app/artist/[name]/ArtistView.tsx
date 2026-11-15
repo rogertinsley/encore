@@ -43,10 +43,8 @@ export function ArtistView({ artistName }: { artistName: string }) {
         if (controller.signal.aborted) return;
         setData(details);
         setLoading(false);
-        if (details.lidarrConfigured) {
-          const status = await read<ArtistLidarrStatus>(`${path}?status=1`);
-          if (!controller.signal.aborted) setLidarr(status);
-        }
+        const status = await read<ArtistLidarrStatus>(`${path}?status=1`);
+        if (!controller.signal.aborted) setLidarr(status);
       } catch {
         if (!controller.signal.aborted) setLoading(false);
       } finally {
@@ -198,12 +196,14 @@ export function ArtistView({ artistName }: { artistName: string }) {
               );
               const mbid =
                 match?.lidarrMbid ?? album.releaseGroupMbid ?? album.mbid;
+              const year = match?.year ?? album.year;
+              const cover = match?.coverArtUrl ?? album.coverArtUrl;
               return (
                 <div key={album.name} className="flex flex-col gap-1.5">
                   <div className="aspect-square rounded-lg overflow-hidden bg-warm-800">
-                    {album.coverArtUrl ? (
+                    {cover ? (
                       <Image
-                        src={album.coverArtUrl}
+                        src={cover}
                         alt={album.name}
                         width={200}
                         height={200}
@@ -216,10 +216,8 @@ export function ArtistView({ artistName }: { artistName: string }) {
                     )}
                   </div>
                   <p className="text-xs text-warm-200 truncate">{album.name}</p>
-                  {album.year && (
-                    <p className="font-mono text-xs text-warm-300">
-                      {album.year}
-                    </p>
+                  {year && (
+                    <p className="font-mono text-xs text-warm-300">{year}</p>
                   )}
                   {mbid ? (
                     <ReleaseAction
@@ -230,16 +228,16 @@ export function ArtistView({ artistName }: { artistName: string }) {
                           : null
                       }
                       status={match?.lidarrStatus ?? null}
-                      releaseDate={album.year?.toString()}
+                      releaseDate={year?.toString()}
                     />
-                  ) : (
+                  ) : !lidarrLoading ? (
                     <Link
                       className="min-h-9 text-sm text-amber-accent hover:underline"
-                      href={`/discover?album=${encodeURIComponent(album.name)}`}
+                      href={`/discover?${new URLSearchParams({ album: album.name, artist: data.name })}`}
                     >
                       Find album in Explore
                     </Link>
-                  )}
+                  ) : null}
                 </div>
               );
             })}

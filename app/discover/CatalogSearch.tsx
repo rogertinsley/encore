@@ -1,7 +1,14 @@
 "use client";
 
+import { baseAlbumTitle } from "@/lib/album-title";
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { ReleaseAction } from "@/app/components/ReleaseAction";
 import type { ReleaseProgress } from "@/lib/lidarr/progress";
 
@@ -18,7 +25,13 @@ interface Results {
   lidarrConfigured: boolean;
 }
 
-export function CatalogSearch({ album }: { album: string }) {
+export function CatalogSearch({
+  album,
+  artist,
+}: {
+  album: string;
+  artist: string;
+}) {
   const [query, setQuery] = useState(album);
   const [type, setType] = useState<"artist" | "album">(
     album ? "album" : "artist"
@@ -28,31 +41,47 @@ export function CatalogSearch({ album }: { album: string }) {
   const [error, setError] = useState("");
   const active = useRef<AbortController | null>(null);
 
-  useEffect(() => () => active.current?.abort(), []);
+  const search = useCallback(
+    async (query: string, type: "artist" | "album", artist?: string) => {
+      if (!query.trim()) return;
+      active.current?.abort();
+      const controller = new AbortController();
+      active.current = controller;
+      setPending(true);
+      setError("");
+      setResults(null);
+      try {
+        const params = new URLSearchParams({ q: query.trim(), type });
+        if (type === "album" && artist) params.set("artist", artist);
+        const response = await fetch(`/api/explore?${params}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok)
+          throw new Error("Search is temporarily unavailable. Try again.");
+        const data = (await response.json()) as Results;
+        if (!controller.signal.aborted) setResults(data);
+      } catch {
+        if (!controller.signal.aborted)
+          setError("Search is temporarily unavailable. Try again.");
+      } finally {
+        if (!controller.signal.aborted) setPending(false);
+      }
+    },
+    []
+  );
 
-  async function search(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (album) void search(baseAlbumTitle(album), "album", artist);
+    return () => active.current?.abort();
+  }, [album, artist, search]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!query.trim()) return;
-    active.current?.abort();
-    const controller = new AbortController();
-    active.current = controller;
-    setPending(true);
-    setError("");
-    setResults(null);
-    try {
-      const params = new URLSearchParams({ q: query.trim(), type });
-      const response = await fetch(`/api/explore?${params}`, {
-        signal: controller.signal,
-      });
-      if (!response.ok)
-        throw new Error("Search is temporarily unavailable. Try again.");
-      setResults((await response.json()) as Results);
-    } catch {
-      if (!controller.signal.aborted)
-        setError("Search is temporarily unavailable. Try again.");
-    } finally {
-      if (!controller.signal.aborted) setPending(false);
-    }
+    void search(
+      query === album ? baseAlbumTitle(query) : query,
+      type,
+      query === album ? artist : undefined
+    );
   }
 
   return (
@@ -60,7 +89,7 @@ export function CatalogSearch({ album }: { album: string }) {
       aria-label="Catalog search"
       className="mb-10 border-b border-warm-700 pb-6"
     >
-      <form onSubmit={search} className="flex flex-wrap items-end gap-3">
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm text-warm-300">
           Search by
           <select

@@ -38,11 +38,18 @@ export function ReleaseAction({
   const complete =
     status === "downloaded" || (upcoming && status === "monitored");
 
-  const polling = busy || (result?.ok === true && !complete);
+  const [searchUntil, setSearchUntil] = useState(0);
+  const polling = busy || searchUntil > 0;
+  const displayedStatus = searchUntil && !busy ? "queued" : status;
   useEffect(() => {
     if (!polling || !mbid) return;
     const controller = new AbortController();
     const timer = window.setInterval(async () => {
+      const waiting = Date.now() < searchUntil;
+      if (!waiting) {
+        setSearchUntil(0);
+        if (searchUntil) setResult(null);
+      }
       try {
         const response = await fetch(
           `/api/releases/${encodeURIComponent(mbid)}`,
@@ -52,9 +59,15 @@ export function ReleaseAction({
         const data = (await response.json()) as {
           status: ReleaseProgress | null;
         };
-        if (data.status) {
+        if (!controller.signal.aborted && data.status) {
+          if (waiting && data.status === "not-tracked") return;
           setUpdatedStatus(data.status);
-          setResult(null);
+          if (
+            ["downloaded", "import-failed", "downloading"].includes(data.status)
+          ) {
+            setSearchUntil(0);
+            setResult(null);
+          }
         }
       } catch {
         // Keep the last known status until Lidarr is reachable.
@@ -64,15 +77,22 @@ export function ReleaseAction({
       window.clearInterval(timer);
       controller.abort();
     };
-  }, [mbid, polling]);
+  }, [mbid, polling, searchUntil]);
 
   async function submit() {
-    if (!path || pending || result?.ok || busy || complete) return;
+    if (!path || pending || busy || complete || searchUntil) return;
     setPending(true);
     setResult(null);
     try {
       const response = await fetch(path, { method: "POST" });
-      const data = (await response.json()) as { message: string };
+      const data = (await response.json()) as {
+        message: string;
+        status?: ReleaseProgress;
+      };
+      if (response.ok && data.status) {
+        if (data.status === "queued") setSearchUntil(Date.now() + 120_000);
+        else setUpdatedStatus(data.status);
+      }
       setResult({ message: data.message, ok: response.ok });
     } catch {
       setResult({ message: "Could not reach Lidarr. Try again.", ok: false });
@@ -83,17 +103,17 @@ export function ReleaseAction({
 
   return (
     <div className="flex flex-col items-start gap-0.5">
-      {status && (
+      {displayedStatus && (
         <span
           className={`text-sm ${status === "import-failed" ? "text-red-300" : "text-warm-300"}`}
         >
-          {labels[status]}
+          {labels[displayedStatus]}
         </span>
       )}
       {path && !complete && !busy && (
         <button
           type="button"
-          aria-disabled={pending || result?.ok || undefined}
+          aria-disabled={pending || Boolean(searchUntil) || undefined}
           onClick={submit}
           className="min-h-9 text-left text-sm text-amber-accent underline-offset-4 hover:underline aria-disabled:opacity-70"
         >

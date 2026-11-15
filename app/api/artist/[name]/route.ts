@@ -27,6 +27,8 @@ export interface ArtistLidarrStatus {
     mbid: string | null;
     lidarrMbid: string | null;
     lidarrStatus: ReleaseProgress | null;
+    year: number | null;
+    coverArtUrl: string | null;
   }>;
 }
 
@@ -37,14 +39,20 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   const { name } = await params;
-  const cacheKey = `artist-page:v3:${name.toLowerCase()}`;
+  const cacheKey = `artist-page:v4:${name.toLowerCase()}`;
   const searchParams = new URL(request.url).searchParams;
   const detailsOnly = searchParams.get("details") === "1";
   const readArtist = () =>
     readRedisSnapshot(
-      cacheKey,
+      detailsOnly ? `${cacheKey}:basic` : cacheKey,
       ARTIST_CACHE,
-      () => getArtistPageData(name, clients, process.env.LASTFM_USERNAME ?? ""),
+      () =>
+        getArtistPageData(
+          name,
+          clients,
+          process.env.LASTFM_USERNAME ?? "",
+          !detailsOnly
+        ),
       (artist) =>
         artist.listeners > 0 ||
         artist.topTracks.length > 0 ||
@@ -72,12 +80,16 @@ export async function GET(
   if (searchParams.get("status") === "1") {
     return NextResponse.json({
       lidarrTracked,
-      topAlbums: topAlbums.map(({ name, mbid, lidarrMbid, lidarrStatus }) => ({
-        name,
-        mbid,
-        lidarrMbid,
-        lidarrStatus,
-      })),
+      topAlbums: topAlbums.map(
+        ({ name, mbid, lidarrMbid, lidarrStatus, year, coverArtUrl }) => ({
+          name,
+          mbid,
+          lidarrMbid,
+          lidarrStatus,
+          year,
+          coverArtUrl,
+        })
+      ),
     } satisfies ArtistLidarrStatus);
   }
 

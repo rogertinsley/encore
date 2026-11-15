@@ -125,7 +125,11 @@ export class MusicBrainzClient {
     }
   }
 
-  async searchCatalog(query: string, type: "artist" | "album") {
+  async searchCatalog(
+    query: string,
+    type: "artist" | "album",
+    artist?: string
+  ) {
     const phrase = query.replace(/[\\"]/g, "\\$&");
     if (type === "artist") {
       const data = await this.fetch<{
@@ -142,13 +146,32 @@ export class MusicBrainzClient {
     }
     const data = await this.fetch<{ "release-groups": ReleaseGroup[] }>(
       "/release-group",
-      { query: `releasegroup:"${phrase}"`, limit: "12" },
+      {
+        query: `releasegroup:"${phrase}"${artist ? ` AND artist:"${artist.replace(/[\\"]/g, "\\$&")}"` : ""}`,
+        limit: "12",
+      },
       300
     );
     return {
       artists: [],
       releases: data["release-groups"].map(toCatalogRelease),
     };
+  }
+
+  async findArtistAlbum(title: string, artistMbid: string) {
+    const phrase = title.replace(/[\\"]/g, "\\$&");
+    const data = await this.fetch<{ "release-groups": ReleaseGroup[] }>(
+      "/release-group",
+      {
+        query: `releasegroup:"${phrase}" AND arid:"${artistMbid}"`,
+        limit: "100",
+      },
+      86400
+    );
+    const matches = data["release-groups"].filter(
+      (group) => group.title.trim().toLowerCase() === title.trim().toLowerCase()
+    );
+    return matches.length === 1 ? toCatalogRelease(matches[0]) : null;
   }
 
   async lookupCatalogRelease(mbid: string, preferEdition = false) {

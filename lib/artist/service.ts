@@ -1,3 +1,4 @@
+import { baseAlbumTitle } from "@/lib/album-title";
 import type { LastFMClient } from "@/lib/lastfm/client";
 import type { MusicBrainzClient } from "@/lib/musicbrainz/client";
 import type { FanartTVClient, ArtistImages } from "@/lib/fanart/client";
@@ -29,7 +30,10 @@ type Clients = {
     LastFMClient,
     "getArtistInfo" | "getTopTracks" | "getTopAlbums" | "getSimilarArtists"
   >;
-  musicBrainz: Pick<MusicBrainzClient, "searchArtist" | "lookupCatalogRelease">;
+  musicBrainz: Pick<
+    MusicBrainzClient,
+    "searchArtist" | "lookupCatalogRelease" | "findArtistAlbum"
+  >;
   fanartTV: Pick<FanartTVClient, "getArtistImages">;
   coverArt: Pick<CoverArtArchiveClient, "getAlbumArtByReleaseGroup">;
 };
@@ -37,7 +41,8 @@ type Clients = {
 export async function getArtistPageData(
   artistName: string,
   { lastfm, musicBrainz, fanartTV, coverArt }: Clients,
-  username: string
+  username: string,
+  enrichAlbums = true
 ): Promise<ArtistPageData> {
   const [artistInfo, topTracks, topAlbums, similarArtists] = await Promise.all([
     lastfm.getArtistInfo(artistName, username).catch(() => null),
@@ -55,13 +60,16 @@ export async function getArtistPageData(
 
   const topAlbumsWithArt = await Promise.all(
     topAlbums.map(async (album) => {
+      const baseTitle = baseAlbumTitle(album.name);
       const [coverArtUrl, release] = await Promise.all([
-        album.mbid
+        enrichAlbums && album.mbid
           ? coverArt.getAlbumArtByReleaseGroup(album.mbid).catch(() => null)
           : null,
-        album.mbid
+        enrichAlbums && album.mbid
           ? musicBrainz.lookupCatalogRelease(album.mbid, true).catch(() => null)
-          : null,
+          : enrichAlbums && mbid && baseTitle !== album.name.trim()
+            ? musicBrainz.findArtistAlbum(baseTitle, mbid).catch(() => null)
+            : null,
       ]);
       return {
         ...album,

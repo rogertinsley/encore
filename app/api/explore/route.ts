@@ -15,7 +15,11 @@ export async function GET(request: Request) {
 
   try {
     const [results, progress] = await Promise.all([
-      clients.musicBrainz.searchCatalog(query, type),
+      clients.musicBrainz.searchCatalog(
+        query,
+        type,
+        params.get("artist")?.trim().slice(0, 120)
+      ),
       type === "album" ? getReleaseProgress() : () => null,
     ]);
     return NextResponse.json({

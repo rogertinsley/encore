@@ -41,9 +41,9 @@ export async function POST(
         { status: 409 }
       );
     }
-    return NextResponse.json({
-      message: await requestReleaseSearch({ ...release, mbid: release.mbid }),
-    });
+    return NextResponse.json(
+      await requestReleaseSearch({ ...release, mbid: release.mbid })
+    );
   } catch (error) {
     return NextResponse.json(
       {
