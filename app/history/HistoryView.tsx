@@ -20,6 +20,29 @@ function formatTime(isoString: string): string {
   });
 }
 
+function HistoryArtwork({ url }: { url: string | null }) {
+  const [failed, setFailed] = useState(false);
+
+  return (
+    <div
+      className="relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md bg-warm-800"
+      aria-hidden="true"
+    >
+      <span className="text-sm text-warm-600">♪</span>
+      {url && !failed && (
+        <Image
+          src={url}
+          alt=""
+          width={48}
+          height={48}
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </div>
+  );
+}
+
 export function HistoryView() {
   const [tracks, setTracks] = useState<RecentTrack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,21 +78,7 @@ export function HistoryView() {
       <div className="flex flex-col divide-y divide-warm-800/60">
         {tracks.map((track, i) => (
           <div key={i} className="flex items-center gap-4 py-3">
-            <div className="w-12 h-12 rounded-md overflow-hidden bg-warm-800 shrink-0">
-              {track.albumArtUrl ? (
-                <Image
-                  src={track.albumArtUrl}
-                  alt={track.albumName ?? track.trackName}
-                  width={48}
-                  height={48}
-                  className="object-cover w-full h-full"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-sm text-warm-600">♪</span>
-                </div>
-              )}
-            </div>
+            <HistoryArtwork key={track.albumArtUrl} url={track.albumArtUrl} />
             <div className="flex-1 min-w-0">
               <p className="text-warm-100 text-sm font-medium truncate">
                 {track.trackName}
