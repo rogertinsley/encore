@@ -93,7 +93,7 @@ export function ShelfView() {
         <p className="mb-3 text-[0.7rem] uppercase tracking-[0.3em] text-amber-accent">
           Encore collection
         </p>
-        <h1 className="font-display text-5xl font-light tracking-tight text-warm-100 sm:text-7xl">
+        <h1 className="font-display text-5xl font-medium tracking-tight text-warm-100 sm:text-7xl">
           The Listening Shelf
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-6 text-warm-400 sm:text-base">

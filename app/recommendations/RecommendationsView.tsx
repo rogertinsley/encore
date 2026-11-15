@@ -60,7 +60,7 @@ export function RecommendationsView() {
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-6">
       <div className="flex items-baseline justify-between">
-        <h1 className="font-display italic text-2xl font-light text-warm-100">
+        <h1 className="font-display italic text-2xl font-medium text-warm-100">
           Recommendations
         </h1>
         {lastRun && (

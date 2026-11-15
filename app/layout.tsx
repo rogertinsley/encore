@@ -1,20 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Outfit, DM_Mono } from "next/font/google";
+import { Atkinson_Hyperlegible_Next, DM_Mono } from "next/font/google";
 import { AppChrome } from "./components/AppChrome";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
+const atkinson = Atkinson_Hyperlegible_Next({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
   style: ["normal", "italic"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  variable: "--font-sans",
+  variable: "--font-encore",
   display: "swap",
 });
 
@@ -42,10 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${cormorant.variable} ${outfit.variable} ${dmMono.variable}`}
-    >
+    <html lang="en" className={`${atkinson.variable} ${dmMono.variable}`}>
       <body className="min-h-screen">
         <AppChrome>{children}</AppChrome>
       </body>

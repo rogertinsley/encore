@@ -115,7 +115,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
             </div>
           )}
           <div className="flex flex-col gap-1 min-w-0">
-            <h1 className="font-display text-3xl font-light text-white leading-tight tracking-tight [overflow-wrap:anywhere]">
+            <h1 className="font-display text-3xl font-medium text-white leading-tight tracking-tight [overflow-wrap:anywhere]">
               {data.name}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-white/75">
@@ -161,7 +161,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
       {/* Top Tracks */}
       {data.topTracks.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="font-display italic text-lg font-light text-warm-300">
+          <h2 className="font-display italic text-lg font-medium text-warm-300">
             Top Tracks
           </h2>
           <div className="flex flex-col gap-1">
@@ -188,7 +188,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
       {/* Top Albums */}
       {data.topAlbums.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="font-display italic text-lg font-light text-warm-300">
+          <h2 className="font-display italic text-lg font-medium text-warm-300">
             Albums
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -246,7 +246,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
       {/* Similar Artists */}
       {data.similarArtists.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="font-display italic text-lg font-light text-warm-300">
+          <h2 className="font-display italic text-lg font-medium text-warm-300">
             Similar Artists
           </h2>
           <div className="flex flex-wrap gap-2">

@@ -100,7 +100,7 @@ function LeadStory({ lead }: { lead: NonNullable<EditorialData["lead"]> }) {
 
         {/* Artist name — viewport-scaled */}
         <h1
-          className="font-display font-light text-white leading-none tracking-tight mb-3 clear-none"
+          className="font-display font-medium text-white leading-none tracking-tight mb-3 clear-none"
           style={{
             fontSize: "clamp(3rem, 10vw, 7.5rem)",
             ...reveal(80),
@@ -200,7 +200,7 @@ function AlbumReviews({ reviews }: { reviews: EditorialData["albumReviews"] }) {
         >
           {/* Large decorative number */}
           <span
-            className="absolute bottom-2 right-4 font-display font-light text-warm-800/70 select-none pointer-events-none leading-none"
+            className="absolute bottom-2 right-4 font-display font-medium text-warm-800/70 select-none pointer-events-none leading-none"
             style={{ fontSize: "10rem" }}
           >
             01
@@ -264,7 +264,7 @@ function AlbumReviews({ reviews }: { reviews: EditorialData["albumReviews"] }) {
             >
               {/* Decorative number */}
               <span
-                className="absolute bottom-0 right-3 font-display font-light text-warm-800/60 select-none pointer-events-none leading-none"
+                className="absolute bottom-0 right-3 font-display font-medium text-warm-800/60 select-none pointer-events-none leading-none"
                 style={{ fontSize: "6rem" }}
               >
                 {String(i + 2).padStart(2, "0")}
@@ -326,7 +326,7 @@ function ArtistSpotlight({
     >
       {/* Decorative star */}
       <span
-        className="absolute right-6 top-1/2 -translate-y-1/2 font-display font-light text-amber-accent/10 select-none pointer-events-none leading-none"
+        className="absolute right-6 top-1/2 -translate-y-1/2 font-display font-medium text-amber-accent/10 select-none pointer-events-none leading-none"
         style={{ fontSize: "12rem" }}
       >
         ★
@@ -492,7 +492,7 @@ function InThePress({ items }: { items: NewsItem[] }) {
         <div className="bg-warm-900 px-6 py-4 flex items-center justify-between gap-4 border-b border-warm-700/60">
           <div className="h-px flex-1 bg-warm-700/40" />
           <h2
-            className="font-display text-2xl font-light tracking-[0.25em] text-warm-200 uppercase shrink-0"
+            className="font-display text-2xl font-medium tracking-[0.25em] text-warm-200 uppercase shrink-0"
             style={{ letterSpacing: "0.3em" }}
           >
             The Encore Press

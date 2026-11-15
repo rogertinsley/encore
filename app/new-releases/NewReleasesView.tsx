@@ -91,7 +91,7 @@ export function NewReleasesView() {
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8">
       <div className="flex items-baseline justify-between">
-        <h1 className="font-display italic text-2xl font-light text-warm-100">
+        <h1 className="font-display italic text-2xl font-medium text-warm-100">
           New Releases
         </h1>
         {lastRun && (
@@ -101,7 +101,7 @@ export function NewReleasesView() {
 
       {groups.map(([date, releases]) => (
         <section key={date} className="flex flex-col gap-3">
-          <h2 className="font-display italic text-base text-warm-400 font-light">
+          <h2 className="font-display italic text-base text-warm-400 font-medium">
             {formatDate(date)}
           </h2>
           <div className="flex flex-col gap-1.5">

@@ -97,7 +97,7 @@ export default async function ActivityPage() {
   return (
     <main className="mx-auto max-w-6xl px-6 py-10 sm:px-10">
       <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="font-display text-5xl font-light text-warm-100 sm:text-6xl">
+        <h1 className="font-display text-5xl font-medium text-warm-100 sm:text-6xl">
           Lidarr Activity
         </h1>
         <a

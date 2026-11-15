@@ -19,12 +19,17 @@
   --color-amber-light: #e0b47a;
 
   /* Typography */
-  --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
-  --font-sans: "Outfit", system-ui, -apple-system, sans-serif;
   --font-mono: "DM Mono", "JetBrains Mono", "Fira Mono", monospace;
 }
 
+@theme inline {
+  --font-sans: var(--font-encore, system-ui, sans-serif);
+  --font-display: var(--font-encore, system-ui, sans-serif);
+}
+
 :root {
+  --font-sans: var(--font-encore, system-ui, sans-serif);
+  --font-display: var(--font-encore, system-ui, sans-serif);
   --background: #0c0b09;
   --foreground: #ede8df;
 }

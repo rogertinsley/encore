@@ -50,7 +50,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-display italic text-lg font-light text-warm-300 mb-5">
+    <h2 className="font-display italic text-lg font-medium text-warm-300 mb-5">
       {children}
     </h2>
   );

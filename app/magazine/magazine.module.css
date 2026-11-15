@@ -35,7 +35,7 @@
 .activity h2 {
   font-family: var(--font-display);
   text-wrap: balance;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--paper);
 }
 
@@ -200,7 +200,7 @@
 
 .dateline {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
   margin-bottom: 0.24rem;

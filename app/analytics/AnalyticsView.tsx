@@ -34,7 +34,7 @@ function yearsAgo(iso: string): string {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-display italic text-lg font-light text-warm-300 mb-5">
+    <h2 className="font-display italic text-lg font-medium text-warm-300 mb-5">
       {children}
     </h2>
   );
@@ -56,7 +56,7 @@ function StatsBar({ data }: { data: AnalyticsData }) {
           key={s.label}
           className="bg-warm-900 rounded-xl p-5 border border-warm-700"
         >
-          <p className="font-display text-3xl font-light text-warm-100 tabular-nums">
+          <p className="font-display text-3xl font-medium text-warm-100 tabular-nums">
             {s.value}
           </p>
           <p className="font-mono text-xs text-warm-500 mt-1 uppercase tracking-wider">

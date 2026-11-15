@@ -153,7 +153,7 @@
 }
 .artist {
   font-size: clamp(17px, min(2.3vw, 4.3vh), 35px);
-  font-weight: 300;
+  font-weight: 500;
   line-height: 1.2;
   color: #f1ebe5;
   margin: 0 0 7px;
@@ -163,7 +163,7 @@
 }
 .album {
   font-size: clamp(12px, min(1.45vw, 2.8vh), 20px);
-  font-weight: 300;
+  font-weight: 500;
   color: #c6beb4aa;
   margin: 0;
   overflow: hidden;
@@ -567,7 +567,7 @@
 }
 .idleClock {
   color: #7d7165;
-  font: 300 clamp(32px, 6vw, 70px) var(--font-display);
+  font: 500 clamp(32px, 6vw, 70px) var(--font-display);
   letter-spacing: 0.03em;
   animation: drift 180s ease-in-out infinite alternate;
 }
