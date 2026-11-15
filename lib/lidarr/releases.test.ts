@@ -108,4 +108,73 @@ describe("Lidarr new-release status", () => {
       })
     );
   });
+  it("registers an exact artist and searches only the requested release", async () => {
+    const artist = {
+      id: 5,
+      artistName: "Radiohead",
+      foreignArtistId: "artist-id",
+    };
+    const match = {
+      id: 17,
+      title: "In Rainbows",
+      foreignAlbumId: mbid,
+      artist,
+      monitored: false,
+    };
+    const replies = [
+      [],
+      [match],
+      [],
+      [artist],
+      [],
+      [
+        {
+          path: "/music",
+          defaultQualityProfileId: 1,
+          defaultMetadataProfileId: 1,
+        },
+      ],
+      artist,
+      [match],
+      [],
+      [],
+      { id: 37 },
+    ];
+    const fetchMock = vi.fn<
+      (
+        _url: URL,
+        _options: RequestInit
+      ) => Promise<{ ok: boolean; json: () => Promise<unknown> }>
+    >(async () => ({
+      ok: true,
+      json: async () => replies.shift(),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      requestReleaseSearch({
+        mbid,
+        title: match.title,
+        artistName: artist.artistName,
+        releaseDate: new Date("2007-10-10"),
+      })
+    ).resolves.toContain("Album search queued");
+
+    const writes = fetchMock.mock.calls
+      .filter(([, options]) => options.method !== "GET")
+      .map(([url, options]) => [
+        url.pathname,
+        JSON.parse(String(options.body)),
+      ]);
+    expect(writes).toEqual([
+      [
+        "/api/v1/artist",
+        expect.objectContaining({
+          addOptions: { monitor: "none", searchForMissingAlbums: false },
+        }),
+      ],
+      ["/api/v1/album/monitor", { albumIds: [17], monitored: true }],
+      ["/api/v1/command", { name: "AlbumSearch", albumIds: [17] }],
+    ]);
+  });
 });

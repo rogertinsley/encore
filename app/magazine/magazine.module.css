@@ -192,16 +192,10 @@
   overflow-wrap: anywhere;
 }
 
-.releaseText > a,
-.releaseStatus {
+.releaseText > a {
   display: inline-block;
-  font-size: 0.74rem;
+  font-size: 0.85rem;
   color: var(--muted);
-}
-
-.releaseStatus::before {
-  content: "·";
-  margin-inline: 0.35rem;
 }
 
 .dateline {
@@ -213,7 +207,7 @@
 }
 
 .action {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
 }
 
 .action button {
@@ -377,4 +371,23 @@
   .releases ul {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.featureNotes {
+  display: grid;
+  gap: 0.35rem;
+  margin-block: 0.85rem 1rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.featureNotes strong {
+  color: var(--paper);
+  font-weight: 500;
+}
+
+.featureNotes a {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }

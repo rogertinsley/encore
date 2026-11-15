@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 import { clients } from "@/lib/clients";
 import type { EnrichedNowPlaying } from "@/lib/enrichment/now-playing";
 import { normalizeTrack } from "@/lib/lastfm/transforms";
-import {
-  getLidarrAlbums,
-  lidarrRequest,
-  statusForRelease,
-} from "@/lib/lidarr/releases";
+import { lidarrRequest } from "@/lib/lidarr/releases";
+import { getReleaseProgress } from "@/lib/lidarr/progress";
 import { NOW_PLAYING_KEY } from "@/lib/poller/now-playing";
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
@@ -48,7 +45,7 @@ async function readMagazine() {
         take: 50,
       }),
       clients.lastfm.getRecentTracks(process.env.LASTFM_USERNAME ?? "", 8),
-      getLidarrAlbums(),
+      getReleaseProgress(),
       lidarrConfigured
         ? (lidarrRequest("api/v1/artist") as Promise<{ artistName: string }[]>)
         : null,
@@ -99,9 +96,7 @@ async function readMagazine() {
             playCount: release.playCount,
             artistTracked: artistTracked(release.artistName),
             lidarrStatus:
-              library && release.mbid
-                ? statusForRelease(release.mbid, library)
-                : null,
+              library && release.mbid ? library(release.mbid) : null,
           }))
         : [],
     recommendations: picks,

@@ -5,6 +5,30 @@ export interface Release {
   type: string;
 }
 
+interface ReleaseGroup {
+  id: string;
+  title: string;
+  "first-release-date"?: string;
+  "primary-type"?: string;
+  "artist-credit"?: Array<{
+    name: string;
+    joinphrase?: string;
+  }>;
+}
+
+function toCatalogRelease(group: ReleaseGroup) {
+  return {
+    mbid: group.id,
+    title: group.title,
+    releaseDate: group["first-release-date"] ?? null,
+    releaseType: group["primary-type"] ?? null,
+    artistName:
+      group["artist-credit"]
+        ?.map((credit) => credit.name + (credit.joinphrase ?? ""))
+        .join("") ?? "",
+  };
+}
+
 const BASE_URL = "https://musicbrainz.org/ws/2";
 const USER_AGENT = "MusicRecommender/1.0";
 
@@ -28,18 +52,27 @@ export class MusicBrainzClient {
 
   private async fetch<T>(
     path: string,
-    params: Record<string, string>
+    params: Record<string, string>,
+    revalidate?: number
   ): Promise<T> {
-    await this.throttle();
     const url = new URL(`${BASE_URL}${path}`);
     url.searchParams.set("fmt", "json");
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
     }
-    const response = await fetch(url.toString(), {
-      headers: { "User-Agent": USER_AGENT },
-      signal: AbortSignal.timeout(8_000),
-    });
+    const request = async () => {
+      await this.throttle();
+      return fetch(url.toString(), {
+        headers: { "User-Agent": USER_AGENT },
+        signal: AbortSignal.timeout(8_000),
+        ...(revalidate ? { next: { revalidate } } : {}),
+      });
+    };
+    let response = await request();
+    if (revalidate && response.status === 503) {
+      await response.body?.cancel();
+      response = await request();
+    }
     if (!response.ok)
       throw new Error(`MusicBrainz API error: ${response.status}`);
     return response.json() as Promise<T>;
@@ -85,6 +118,39 @@ export class MusicBrainzClient {
     } catch {
       return null;
     }
+  }
+
+  async searchCatalog(query: string, type: "artist" | "album") {
+    const phrase = query.replace(/[\\"]/g, "\\$&");
+    if (type === "artist") {
+      const data = await this.fetch<{
+        artists: Array<{ id: string; name: string; disambiguation?: string }>;
+      }>("/artist", { query: `artist:"${phrase}"`, limit: "12" }, 300);
+      return {
+        artists: data.artists.map(({ id, name, disambiguation }) => ({
+          id,
+          name,
+          disambiguation,
+        })),
+        releases: [],
+      };
+    }
+    const data = await this.fetch<{ "release-groups": ReleaseGroup[] }>(
+      "/release-group",
+      { query: `releasegroup:"${phrase}"`, limit: "12" },
+      300
+    );
+    return {
+      artists: [],
+      releases: data["release-groups"].map(toCatalogRelease),
+    };
+  }
+
+  async lookupCatalogRelease(mbid: string) {
+    const data = await this.fetch<ReleaseGroup>(`/release-group/${mbid}`, {
+      inc: "artist-credits",
+    });
+    return toCatalogRelease(data);
   }
 
   async searchArtist(name: string): Promise<string | null> {

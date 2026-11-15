@@ -4,64 +4,56 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/now-playing", label: "Now Playing" },
-  { href: "/display", label: "Display" },
-  { href: "/discover", label: "Discover" },
-  { href: "/activity", label: "Lidarr Activity" },
-  { href: "/shelf", label: "Shelf" },
-  { href: "/history", label: "History" },
-  { href: "/editorial", label: "Editorial" },
-  { href: "/analytics", label: "Analytics" },
+  { href: "/", label: "Magazine", routes: ["/", "/editorial"] },
+  {
+    href: "/discover",
+    label: "Explore",
+    routes: ["/discover", "/artist", "/new-releases", "/recommendations"],
+  },
+  {
+    href: "/library",
+    label: "Library",
+    routes: ["/library", "/activity", "/shelf", "/history", "/analytics"],
+  },
+  { href: "/display", label: "Display", routes: ["/display"] },
 ];
 
 export function Nav() {
   const pathname = usePathname();
-  const isNowPlaying = pathname === "/now-playing";
 
   return (
     <header
       className={
-        isNowPlaying
-          ? "fixed top-0 left-0 right-0 z-20 px-6 py-4"
-          : "border-b border-warm-700 px-6 py-4"
+        pathname === "/now-playing"
+          ? "fixed inset-x-0 top-0 z-20 bg-warm-950/90"
+          : "border-b border-warm-700"
       }
     >
-      <nav className="flex flex-wrap items-center gap-x-7 gap-y-2">
+      <nav
+        aria-label="Main navigation"
+        className="mx-auto flex max-w-7xl items-center justify-between gap-x-3 px-4 sm:justify-start sm:gap-x-8 sm:px-6"
+      >
         <Link
           href="/"
-          aria-label="Encore music magazine"
-          aria-current={pathname === "/" ? "page" : undefined}
-          className={`font-display text-[1.35rem] font-light tracking-[0.08em] mr-2 shrink-0 transition-opacity hover:opacity-80 ${
-            isNowPlaying ? "text-white" : "text-warm-100"
-          }`}
+          className="font-display text-2xl text-warm-100 max-[360px]:hidden"
         >
           Encore
         </Link>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-          {links.map(({ href, label }) => {
-            const active = pathname === href;
+        <div className="flex flex-1 items-center justify-between gap-x-2 sm:justify-start sm:gap-x-6">
+          {links.map(({ href, label, routes }) => {
+            const active = routes.some(
+              (route) => pathname === route || pathname.startsWith(route + "/")
+            );
             return (
               <Link
                 key={href}
                 href={href}
-                className={`relative text-[0.8rem] py-2 tracking-[0.06em] transition-colors ${
-                  active
-                    ? isNowPlaying
-                      ? "text-white"
-                      : "text-warm-100"
-                    : isNowPlaying
-                      ? "text-white/50 hover:text-white/90"
-                      : "text-warm-400 hover:text-warm-200"
-                }`}
+                aria-current={
+                  pathname === href ? "page" : active ? "location" : undefined
+                }
+                className={`flex min-h-12 items-center border-b-2 px-1 text-sm sm:text-base ${active ? "border-amber-accent text-warm-100" : "border-transparent text-warm-300 hover:text-warm-100"}`}
               >
                 {label}
-                {active && (
-                  <span
-                    className={`absolute bottom-0 left-0 right-0 h-px ${
-                      isNowPlaying ? "bg-white/50" : "bg-amber-accent"
-                    }`}
-                  />
-                )}
               </Link>
             );
           })}

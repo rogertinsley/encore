@@ -1,5 +1,5 @@
 import { sameName } from "@/lib/shelf";
-import { lidarrRequest } from "./releases";
+import { lidarrRequest } from "./client";
 
 interface LidarrArtist {
   id: number;
@@ -24,6 +24,62 @@ const pending = new Map<
   { onlyIfNew: boolean; request: Promise<ArtistSearchResult> }
 >();
 
+async function registerArtist(
+  match: LidarrArtist,
+  monitor: "all" | "none"
+): Promise<LidarrArtist | null> {
+  const folders = (await lidarrRequest("api/v1/rootfolder")) as RootFolder[];
+  if (folders.length !== 1) return null;
+  const [folder] = folders;
+  return (await lidarrRequest("api/v1/artist", "POST", {
+    ...match,
+    id: 0,
+    path: "",
+    rootFolderPath: folder.path,
+    qualityProfileId: folder.defaultQualityProfileId,
+    metadataProfileId: folder.defaultMetadataProfileId,
+    monitored: true,
+    monitorNewItems: monitor,
+    addOptions: { monitor, searchForMissingAlbums: monitor === "all" },
+  })) as LidarrArtist;
+}
+
+type Registration = { artist: LidarrArtist | null; added: boolean };
+const pendingRegistrations = new Map<string, Promise<Registration>>();
+
+async function registerOnce(
+  match: LidarrArtist,
+  monitor: "all" | "none"
+): Promise<Registration> {
+  const key = match.foreignArtistId;
+  const running = pendingRegistrations.get(key);
+  if (running) {
+    const result = await running;
+    return { artist: result.artist, added: false };
+  }
+  const request = (async () => {
+    const artists = (await lidarrRequest("api/v1/artist")) as LidarrArtist[];
+    const existing = artists.find((artist) => artist.foreignArtistId === key);
+    if (existing) return { artist: existing, added: false };
+    const artist = await registerArtist(match, monitor);
+    return { artist, added: Boolean(artist) };
+  })();
+  pendingRegistrations.set(key, request);
+  try {
+    return await request;
+  } finally {
+    pendingRegistrations.delete(key);
+  }
+}
+
+export async function ensureReleaseArtist(mbid: string) {
+  const candidates = (await lidarrRequest(
+    `api/v1/artist/lookup?term=lidarr:${encodeURIComponent(mbid)}`
+  )) as LidarrArtist[];
+  const match = candidates.find((artist) => artist.foreignArtistId === mbid);
+  return match ? (await registerOnce(match, "none")).artist : null;
+}
+
 async function addAndSearch(
   artistName: string,
   onlyIfNew: boolean
@@ -46,10 +102,8 @@ async function addAndSearch(
   }
 
   const [match] = matches;
-  const artists = (await lidarrRequest("api/v1/artist")) as LidarrArtist[];
-  const existing = artists.find(
-    (artist) => artist.foreignArtistId === match.foreignArtistId
-  );
+  const registration = await registerOnce(match, "all");
+  const existing = registration.added ? null : registration.artist;
 
   if (existing) {
     if (onlyIfNew) {
@@ -66,25 +120,12 @@ async function addAndSearch(
     };
   }
 
-  const folders = (await lidarrRequest("api/v1/rootfolder")) as RootFolder[];
-  if (folders.length !== 1) {
+  if (!registration.artist) {
     return {
       ok: false,
       message: "Add the artist in Lidarr to choose a music folder.",
     };
   }
-  const [folder] = folders;
-  await lidarrRequest("api/v1/artist", "POST", {
-    ...match,
-    id: 0,
-    path: "",
-    rootFolderPath: folder.path,
-    qualityProfileId: folder.defaultQualityProfileId,
-    metadataProfileId: folder.defaultMetadataProfileId,
-    monitored: true,
-    monitorNewItems: "all",
-    addOptions: { monitor: "all", searchForMissingAlbums: true },
-  });
   return {
     ok: true,
     added: true,

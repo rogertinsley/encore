@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { ArtistImages } from "@/lib/fanart/client";
+import { ReleaseAction } from "@/app/components/ReleaseAction";
+import type { ReleaseProgress } from "@/lib/lidarr/progress";
 import { timeAgo } from "@/lib/utils/time";
 
 interface NewRelease {
@@ -15,22 +17,8 @@ interface NewRelease {
   releaseType: string;
   coverArtUrl: string | null;
   playCount: number;
-  lidarrStatus:
-    | "not-tracked"
-    | "unmonitored"
-    | "monitored"
-    | "partial"
-    | "downloaded"
-    | null;
+  lidarrStatus: ReleaseProgress | null;
 }
-
-const LIDARR_LABELS: Record<NonNullable<NewRelease["lidarrStatus"]>, string> = {
-  "not-tracked": "Not in Lidarr",
-  unmonitored: "In Lidarr · unmonitored",
-  monitored: "Monitored in Lidarr",
-  partial: "Partly downloaded",
-  downloaded: "Downloaded",
-};
 
 interface Recommendation {
   id: string;
@@ -48,6 +36,7 @@ interface RecentTrack {
 }
 
 interface DiscoverData {
+  lidarrConfigured: boolean;
   releases: NewRelease[];
   recommendations: Recommendation[];
   recentTracks: RecentTrack[];
@@ -71,10 +60,12 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 function ReleaseCard({
   release,
+  lidarrConfigured,
   saved,
   onSave,
 }: {
   release: NewRelease;
+  lidarrConfigured: boolean;
   saved: boolean;
   onSave: (id: string) => Promise<void>;
 }) {
@@ -112,15 +103,18 @@ function ReleaseCard({
         >
           {release.title}
         </Link>
-        <p className="text-warm-500 text-xs truncate">{release.artistName}</p>
-        {release.lidarrStatus && (
-          <p
-            className={`text-xs ${release.lidarrStatus === "downloaded" ? "text-emerald-400" : "text-warm-500"}`}
-          >
-            {LIDARR_LABELS[release.lidarrStatus]}
-          </p>
-        )}
+        <p className="text-warm-300 text-xs truncate">{release.artistName}</p>
       </div>
+      <ReleaseAction
+        mbid={release.mbid}
+        path={
+          lidarrConfigured && release.mbid
+            ? `/api/new-releases/${encodeURIComponent(release.id)}/lidarr`
+            : null
+        }
+        status={release.lidarrStatus}
+        releaseDate={release.releaseDate}
+      />
       <button
         type="button"
         disabled={pending || saved}
@@ -137,7 +131,7 @@ function ReleaseCard({
         }}
         className="self-start min-h-9 text-xs tracking-wide text-amber-accent hover:text-warm-100 disabled:opacity-50"
       >
-        {saved ? "On your Shelf ✓" : pending ? "Saving…" : "＋ Keep this"}
+        {saved ? "On your Shelf ✓" : pending ? "Saving…" : "Save to Shelf"}
       </button>
       {error && (
         <p role="status" className="text-xs text-red-300">
@@ -150,10 +144,12 @@ function ReleaseCard({
 
 function NewReleasesSection({
   releases,
+  lidarrConfigured,
   savedMbids,
   onSave,
 }: {
   releases: NewRelease[];
+  lidarrConfigured: boolean;
   savedMbids: Set<string>;
   onSave: (id: string) => Promise<void>;
 }) {
@@ -166,6 +162,7 @@ function NewReleasesSection({
           <ReleaseCard
             key={r.id}
             release={r}
+            lidarrConfigured={lidarrConfigured}
             saved={Boolean(r.mbid && savedMbids.has(r.mbid))}
             onSave={onSave}
           />
@@ -223,7 +220,7 @@ function ArtistCard({ rec }: { rec: Recommendation }) {
         <p className="text-warm-100 text-xs font-medium truncate group-hover:text-white transition-colors">
           {rec.artistName}
         </p>
-        <p className="text-warm-500 text-xs truncate">
+        <p className="text-warm-300 text-xs truncate">
           Like {rec.sourceArtist}
         </p>
       </div>
@@ -280,14 +277,14 @@ function RecentlyPlayedSection({ tracks }: { tracks: RecentTrack[] }) {
               </p>
               <Link
                 href={`/artist/${encodeURIComponent(track.artistName)}`}
-                className="text-warm-500 text-xs truncate hover:text-warm-300 transition-colors block"
+                className="text-warm-300 text-xs truncate hover:text-warm-300 transition-colors block"
               >
                 {track.artistName}
                 {track.albumName ? ` · ${track.albumName}` : ""}
               </Link>
             </div>
             {track.scrobbledAt && (
-              <p className="font-mono text-warm-500 text-xs shrink-0 tabular-nums">
+              <p className="font-mono text-warm-300 text-xs shrink-0 tabular-nums">
                 {timeAgo(track.scrobbledAt)}
               </p>
             )}
@@ -342,7 +339,7 @@ export function DiscoverView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-warm-500 text-sm animate-pulse tracking-wide">
+        <p className="text-warm-300 text-sm animate-pulse tracking-wide">
           Loading…
         </p>
       </div>
@@ -352,7 +349,7 @@ export function DiscoverView() {
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-warm-500 text-sm">Something went wrong.</p>
+        <p className="text-warm-300 text-sm">Something went wrong.</p>
       </div>
     );
   }
@@ -361,6 +358,7 @@ export function DiscoverView() {
     <div className="flex flex-col gap-12">
       <NewReleasesSection
         releases={data.releases}
+        lidarrConfigured={data.lidarrConfigured}
         savedMbids={savedMbids}
         onSave={saveRelease}
       />

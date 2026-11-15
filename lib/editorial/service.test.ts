@@ -33,6 +33,7 @@ const mockAI = {
 
 function makeClients() {
   return {
+    lastfm: { getSimilarArtists: vi.fn().mockResolvedValue([]) },
     musicBrainz: { searchArtist: vi.fn().mockResolvedValue(null) },
     fanartTV: { getArtistImages: vi.fn().mockResolvedValue(null) },
   };

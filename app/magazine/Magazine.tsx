@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { MagazineData } from "@/app/api/magazine/route";
 import type { EditorialData } from "@/lib/editorial/service";
-import type { LidarrReleaseStatus } from "@/lib/lidarr/releases";
+import { ReleaseAction } from "@/app/components/ReleaseAction";
 import styles from "./magazine.module.css";
 
 type Release = MagazineData["releases"][number];
@@ -16,19 +16,14 @@ interface Feature {
   artistName: string;
   subtitle: string | null;
   copy: string | null;
+  recentPlays: number;
+  trackName: string | null;
+  relatedArtist: string | null;
   imageUrl: string | null;
   wide: boolean;
   link: string;
   linkLabel: string;
 }
-
-const releaseStatus: Record<LidarrReleaseStatus, string> = {
-  "not-tracked": "Not in Lidarr",
-  unmonitored: "Unmonitored",
-  monitored: "Monitored",
-  partial: "Partly imported",
-  downloaded: "In your library",
-};
 
 function artistPath(artist: string) {
   return `/artist/${encodeURIComponent(artist)}`;
@@ -176,19 +171,6 @@ function ReleaseRow({
   release: Release;
   lidarrConfigured: boolean;
 }) {
-  const upcoming = Date.parse(release.releaseDate) > Date.now();
-  const canSend =
-    lidarrConfigured &&
-    release.mbid &&
-    release.lidarrStatus !== "downloaded" &&
-    (release.artistTracked !== false ||
-      (release.lidarrStatus && release.lidarrStatus !== "not-tracked"));
-  const actionLabel = upcoming
-    ? "Monitor release"
-    : release.lidarrStatus === "not-tracked"
-      ? "Add & search"
-      : "Search in Lidarr";
-
   return (
     <li className={styles.release}>
       <div className={styles.releaseArt}>
@@ -207,17 +189,16 @@ function ReleaseRow({
         </p>
         <h3>{release.title}</h3>
         <Link href={artistPath(release.artistName)}>{release.artistName}</Link>
-        {release.lidarrStatus && (
-          <span className={styles.releaseStatus}>
-            {releaseStatus[release.lidarrStatus]}
-          </span>
-        )}
-        {canSend && !(upcoming && release.lidarrStatus === "monitored") && (
-          <Action
-            path={`/api/new-releases/${encodeURIComponent(release.id)}/lidarr`}
-            label={actionLabel}
-          />
-        )}
+        <ReleaseAction
+          mbid={release.mbid}
+          path={
+            lidarrConfigured && release.mbid
+              ? `/api/new-releases/${encodeURIComponent(release.id)}/lidarr`
+              : null
+          }
+          status={release.lidarrStatus}
+          releaseDate={release.releaseDate}
+        />
       </div>
     </li>
   );
@@ -236,6 +217,9 @@ function selectFeature(
       artistName: story.artistName,
       subtitle: story.albumName ? story.artistName : null,
       copy: story.pullQuote || story.review.split("\n\n")[0],
+      recentPlays: editorial?.featureContext?.recentPlays ?? 0,
+      trackName: editorial?.featureContext?.trackName ?? null,
+      relatedArtist: editorial?.featureContext?.relatedArtist ?? null,
       imageUrl:
         "backgroundUrl" in story
           ? (story.backgroundUrl ?? story.albumArtUrl)
@@ -253,7 +237,15 @@ function selectFeature(
       title: track.albumName ?? track.trackName,
       artistName: track.artistName,
       subtitle: track.artistName,
-      copy: null,
+      copy: current
+        ? "From your now-playing queue."
+        : "From your recent Last.fm listening.",
+      recentPlays: 0,
+      trackName: track.albumName ? track.trackName : null,
+      relatedArtist:
+        data?.recommendations.find(
+          (artist) => artist.sourceArtist === track.artistName
+        )?.artistName ?? null,
       imageUrl: track.albumArtUrl,
       wide: false,
       link: artistPath(track.artistName),
@@ -331,6 +323,35 @@ export function Magazine() {
               </Link>
             )}
             {feature?.copy && <p className={styles.excerpt}>{feature.copy}</p>}
+            {feature &&
+              (feature.recentPlays > 0 ||
+                feature.trackName ||
+                feature.relatedArtist) && (
+                <div className={styles.featureNotes}>
+                  {feature.recentPlays > 0 && (
+                    <p>
+                      You played{" "}
+                      {feature.subtitle ? "this release" : feature.artistName}{" "}
+                      {feature.recentPlays}{" "}
+                      {feature.recentPlays === 1 ? "time" : "times"} in your
+                      last 50 scrobbles.
+                    </p>
+                  )}
+                  {feature.trackName && (
+                    <p>
+                      Start with <strong>“{feature.trackName}”</strong>
+                    </p>
+                  )}
+                  {feature.relatedArtist && (
+                    <p>
+                      Listen next{" "}
+                      <Link href={artistPath(feature.relatedArtist)}>
+                        {feature.relatedArtist}
+                      </Link>
+                    </p>
+                  )}
+                </div>
+              )}
             {!feature && (
               <p role="status">
                 {failed

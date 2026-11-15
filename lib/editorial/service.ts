@@ -6,6 +6,7 @@ import {
 } from "@/lib/ai/editorial";
 import { getPersonalisedNews } from "@/lib/news/service";
 import { filterPlaceholder } from "@/lib/lastfm/utils";
+import type { LastFMClient } from "@/lib/lastfm/client";
 import type { RecentTrack } from "@/lib/lastfm/types";
 import type { TopArtist } from "@/lib/lastfm/types";
 import type { NewsItem } from "@/lib/news/service";
@@ -14,6 +15,7 @@ import type { FanartTVClient } from "@/lib/fanart/client";
 import type { MusicBrainzClient } from "@/lib/musicbrainz/client";
 
 type EditorialClients = {
+  lastfm: Pick<LastFMClient, "getSimilarArtists">;
   musicBrainz: Pick<MusicBrainzClient, "searchArtist">;
   fanartTV: Pick<FanartTVClient, "getArtistImages">;
 };
@@ -24,6 +26,11 @@ type EditorialRedis = {
 };
 
 export interface EditorialData {
+  featureContext?: {
+    recentPlays: number;
+    trackName: string | null;
+    relatedArtist: string | null;
+  };
   lead: {
     artistName: string;
     albumName: string | null;
@@ -106,6 +113,11 @@ export async function buildEditorialData(
   const spotlightArtist =
     recentArtistNames.find((a) => a !== leadArtist) ?? null;
 
+  const featureArtist = leadArtist ?? topAlbums[0]?.artist;
+  const similarArtists = featureArtist
+    ? clients.lastfm.getSimilarArtists(featureArtist).catch(() => [])
+    : Promise.resolve([]);
+
   const [
     leadReview,
     weeklyDigest,
@@ -113,6 +125,7 @@ export async function buildEditorialData(
     spotlightContent,
     news,
     spotlightImageUrl,
+    relatedArtists,
   ] = await Promise.all([
     leadArtist
       ? generateLeadReview(
@@ -137,9 +150,42 @@ export async function buildEditorialData(
       : null,
     getPersonalisedNews(allArtistNames, redis).catch(() => [] as NewsItem[]),
     spotlightArtist ? fetchSpotlightImage(spotlightArtist, clients) : null,
+    similarArtists,
   ]);
 
+  const featured =
+    leadArtist && leadReview
+      ? { artist: leadArtist, album: leadAlbum }
+      : albumReviewResults.find((review) => review !== null);
+  const matchingTracks = featured
+    ? recentTracks.filter(
+        (track) =>
+          track.artistName === featured.artist &&
+          (!featured.album || track.albumName === featured.album)
+      )
+    : [];
+  const trackName =
+    featured &&
+    nowPlaying?.artistName === featured.artist &&
+    (!featured.album || nowPlaying.albumName === featured.album)
+      ? nowPlaying.trackName
+      : matchingTracks[0]?.trackName;
+
   return {
+    featureContext: featured
+      ? {
+          recentPlays: matchingTracks.filter((track) =>
+            Boolean(track.scrobbledAt)
+          ).length,
+          trackName: trackName ?? null,
+          relatedArtist:
+            featured.artist === featureArtist
+              ? (relatedArtists.find(
+                  (artist) => artist.name !== featured.artist
+                )?.name ?? null)
+              : null,
+        }
+      : undefined,
     lead:
       leadArtist && leadReview
         ? {

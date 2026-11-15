@@ -1,6 +1,9 @@
 /** MusicBrainz release-group status and explicit Lidarr album actions. */
 import { sameName } from "@/lib/shelf";
-export const LIDARR_WEB_URL = "https://lidarr.rogertinsley.com";
+import { LIDARR_WEB_URL, lidarrRequest } from "./client";
+import { ensureReleaseArtist } from "./artists";
+
+export { LIDARR_WEB_URL, lidarrRequest } from "./client";
 
 export class LidarrReleaseActionError extends Error {
   constructor(
@@ -30,35 +33,6 @@ export interface LidarrAlbum {
     trackFileCount?: number;
     percentOfTracks?: number;
   };
-}
-
-function lidarrUrl(path: string): URL {
-  const base = process.env.LIDARR_URL || LIDARR_WEB_URL;
-  if (!process.env.LIDARR_API_KEY) throw new Error("Lidarr is not configured");
-  const url = new URL(path, `${base.replace(/\/$/, "")}/`);
-  if (!["http:", "https:"].includes(url.protocol))
-    throw new Error("Invalid Lidarr URL");
-  return url;
-}
-
-export async function lidarrRequest(
-  path: string,
-  method = "GET",
-  body?: unknown
-): Promise<unknown> {
-  const response = await fetch(lidarrUrl(path), {
-    method,
-    headers: {
-      "X-Api-Key": process.env.LIDARR_API_KEY!,
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(8000),
-    cache: "no-store",
-    redirect: "error",
-  });
-  if (!response.ok) throw new Error(`Lidarr returned ${response.status}`);
-  return response.json();
 }
 
 export function findShelfAlbum(
@@ -92,7 +66,8 @@ export async function monitorShelfAlbum(album: LidarrAlbum): Promise<void> {
 export async function addShelfAlbum(
   releaseGroupMbid: string,
   artistName: string,
-  albumName: string
+  albumName: string,
+  addMissingArtist = false
 ): Promise<LidarrAlbum> {
   const lookup = await lidarrRequest(
     `api/v1/album/lookup?term=lidarr:${encodeURIComponent(releaseGroupMbid)}`
@@ -111,7 +86,7 @@ export async function addShelfAlbum(
   if (!match)
     throw new LidarrReleaseActionError("Lidarr could not verify this release");
   const artists = await lidarrRequest("api/v1/artist");
-  const artist = Array.isArray(artists)
+  let artist = Array.isArray(artists)
     ? artists.find(
         (value) =>
           value &&
@@ -121,6 +96,21 @@ export async function addShelfAlbum(
             value.foreignArtistId === match.artist.foreignArtistId)
       )
     : null;
+  if (!artist?.id && addMissingArtist && match.artist?.foreignArtistId) {
+    artist = await ensureReleaseArtist(match.artist.foreignArtistId);
+    // Lidarr may create album records when it registers an artist.
+    const registeredAlbums = (await lidarrRequest(
+      `api/v1/album?foreignAlbumId=${encodeURIComponent(releaseGroupMbid)}`
+    )) as LidarrAlbum[];
+    const registered = registeredAlbums.find(
+      (album) =>
+        album.foreignAlbumId?.toLowerCase() === releaseGroupMbid.toLowerCase()
+    );
+    if (registered) {
+      if (!registered.monitored) await monitorShelfAlbum(registered);
+      return registered;
+    }
+  }
   if (!artist?.id)
     throw new LidarrReleaseActionError(
       "Add this artist in Lidarr before adding the album"
@@ -194,7 +184,8 @@ async function monitorAndSearchRelease(
   }
 
   const album =
-    existing ?? (await addShelfAlbum(mbid, release.artistName, release.title));
+    existing ??
+    (await addShelfAlbum(mbid, release.artistName, release.title, true));
   if (existing && !existing.monitored) await monitorShelfAlbum(existing);
   if (release.releaseDate.getTime() > Date.now()) {
     return "Monitored in Lidarr for release day";

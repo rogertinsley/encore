@@ -25,7 +25,7 @@ export async function GET() {
   const leadArtist = nowPlaying?.artistName ?? null;
   const leadAlbum = nowPlaying?.albumName ?? null;
 
-  const cacheKey = `editorial:${todayKey()}:${leadArtist ?? "none"}:${leadAlbum ?? "none"}`;
+  const cacheKey = `editorial:v2:${todayKey()}:${leadArtist ?? "none"}:${leadAlbum ?? "none"}`;
   const cached = await redis.get(cacheKey);
   if (cached) return NextResponse.json(JSON.parse(cached) as EditorialData);
 
@@ -38,7 +38,7 @@ export async function GET() {
     nowPlaying,
     recentTracks,
     topArtists,
-    { musicBrainz: clients.musicBrainz, fanartTV: clients.fanartTV },
+    clients,
     redis
   );
 

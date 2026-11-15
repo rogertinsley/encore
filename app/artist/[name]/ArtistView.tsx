@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { ArtistPageData } from "@/app/api/artist/[name]/route";
+import { ReleaseAction } from "@/app/components/ReleaseAction";
+import type { ArtistResponse } from "@/app/api/artist/[name]/route";
 import { stripBio } from "@/lib/utils/bio";
 
 function formatNumber(n: number): string {
@@ -11,13 +12,13 @@ function formatNumber(n: number): string {
 }
 
 export function ArtistView({ artistName }: { artistName: string }) {
-  const [data, setData] = useState<ArtistPageData | null>(null);
+  const [data, setData] = useState<ArtistResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`/api/artist/${encodeURIComponent(artistName)}`)
       .then((r) => r.json())
-      .then((json: ArtistPageData) => setData(json))
+      .then((json: ArtistResponse) => setData(json))
       .catch(() => null)
       .finally(() => setLoading(false));
   }, [artistName]);
@@ -25,7 +26,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-warm-500 text-sm animate-pulse tracking-wide">
+        <p className="text-warm-300 text-sm animate-pulse tracking-wide">
           Loading…
         </p>
       </div>
@@ -35,7 +36,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-warm-500 text-sm">Artist not found.</p>
+        <p className="text-warm-300 text-sm">Artist not found.</p>
       </div>
     );
   }
@@ -78,7 +79,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
             <h1 className="font-display text-3xl font-light text-white leading-tight tracking-tight">
               {data.name}
             </h1>
-            <div className="flex items-center gap-3 font-mono text-xs text-white/45">
+            <div className="flex items-center gap-3 font-mono text-xs text-white/75">
               <span>{formatNumber(data.listeners)} listeners</span>
               {data.userPlayCount != null && (
                 <>
@@ -128,7 +129,7 @@ export function ArtistView({ artistName }: { artistName: string }) {
                 <p className="text-sm text-warm-100 truncate flex-1">
                   {track.name}
                 </p>
-                <span className="font-mono text-xs text-warm-500 shrink-0">
+                <span className="font-mono text-xs text-warm-300 shrink-0">
                   {formatNumber(track.playCount)}
                 </span>
               </div>
@@ -163,9 +164,28 @@ export function ArtistView({ artistName }: { artistName: string }) {
                 </div>
                 <p className="text-xs text-warm-200 truncate">{album.name}</p>
                 {album.year && (
-                  <p className="font-mono text-xs text-warm-500">
+                  <p className="font-mono text-xs text-warm-300">
                     {album.year}
                   </p>
+                )}
+                {album.mbid ? (
+                  <ReleaseAction
+                    mbid={album.mbid}
+                    path={
+                      data.lidarrConfigured
+                        ? `/api/releases/${album.mbid}/lidarr`
+                        : null
+                    }
+                    status={album.lidarrStatus}
+                    releaseDate={album.year?.toString()}
+                  />
+                ) : (
+                  <Link
+                    className="min-h-9 text-sm text-amber-accent hover:underline"
+                    href={`/discover?album=${encodeURIComponent(album.name)}`}
+                  >
+                    Find album in Explore
+                  </Link>
                 )}
               </div>
             ))}
