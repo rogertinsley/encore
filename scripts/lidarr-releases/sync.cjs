@@ -31,6 +31,13 @@ function lidarr(path, method = "GET", body) {
   });
 }
 
+const run = {
+  startedAt: new Date().toISOString(),
+  added: [],
+  searched: [],
+  issues: [],
+};
+
 async function main() {
   const [{ releases }, artists, albums] = await Promise.all([
     getJson("http://localhost:3567/api/new-releases"),
@@ -68,6 +75,7 @@ async function main() {
         );
         if (!match) {
           console.log("Unavailable in Lidarr", label);
+          run.issues.push(label + " · No exact match in Lidarr");
           continue;
         }
         console.log(dryRun ? "Would add" : "Adding", label);
@@ -81,6 +89,7 @@ async function main() {
           addOptions: { searchForNewAlbum: false },
         });
         byGroup.set(release.mbid, album);
+        run.added.push(label);
       }
       const stats = album.statistics;
       if (stats?.trackCount > 0 && stats.trackFileCount >= stats.trackCount)
@@ -88,9 +97,11 @@ async function main() {
       // Preserve monitoring choices for releases already in Lidarr.
       if (!album.monitored || date > now) continue;
       search.push(album.id);
+      run.searched.push(label);
       console.log(dryRun ? "Would search" : "Ready to search", label);
     } catch (error) {
       console.error(label, error.message);
+      run.issues.push(label + " · " + error.message);
       process.exitCode = 1;
     }
   }
@@ -100,11 +111,42 @@ async function main() {
       name: "AlbumSearch",
       albumIds: [...new Set(search)],
     });
+    run.commandId = command.id;
     console.log("Lidarr search command", command.id, command.status);
   }
 }
 
-main().catch((error) => {
+async function execute() {
+  try {
+    await main();
+  } catch (error) {
+    run.issues.push(error.message);
+    process.exitCode = 1;
+    console.error(error.message);
+  }
+
+  if (dryRun) return;
+  const Redis = require("ioredis");
+  const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+    connectTimeout: 3000,
+    maxRetriesPerRequest: 0,
+    retryStrategy: () => null,
+  });
+  try {
+    await redis.set(
+      "lidarr:weekly-release-run",
+      JSON.stringify({
+        ...run,
+        finishedAt: new Date().toISOString(),
+        failed: Boolean(process.exitCode),
+      })
+    );
+  } finally {
+    redis.disconnect();
+  }
+}
+
+execute().catch((error) => {
   console.error(error.message);
   process.exitCode = 1;
 });
