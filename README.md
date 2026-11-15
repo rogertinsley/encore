@@ -51,6 +51,8 @@ cp .env.example .env
 | `LIDARR_URL`        | Optional Lidarr base URL reachable from the Encore server (for Docker on the same network: `http://lidarr:8686`) |
 | `LIDARR_API_KEY`    | Optional Lidarr API key from Settings → General; kept server-side                                                |
 
+For Plexamp Now Playing, set `PLEX_URL` to the Plex Media Server URL reachable from Encore and `PLEX_TOKEN` to a token that can read playback sessions. Set `PLEX_USERNAME` to limit the display to your Plex account. Encore shows active EverSolo playback first when both are playing. Plexamp playback appears in Now Playing and Display with track metadata and progress.
+
 The Shelf uses the existing PostgreSQL database. Its migration runs on the next Docker startup. Lidarr actions require `LIDARR_API_KEY`. Set `LIDARR_URL` to override the default server at `https://lidarr.rogertinsley.com`. Encore checks that browser write requests come from the same host.
 
 ### 2. Run with Docker

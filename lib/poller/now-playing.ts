@@ -1,3 +1,4 @@
+import type { PlexClient } from "@/lib/plex/client";
 import { enrichNowPlaying } from "@/lib/enrichment/now-playing";
 import type { LastFMClient } from "@/lib/lastfm/client";
 import type { MusicBrainzClient } from "@/lib/musicbrainz/client";
@@ -14,6 +15,7 @@ const IDLE_GRACE_MS = 5_000;
 
 type PipelineClients = {
   eversolo: Pick<EversoloClient, "getState">;
+  plex?: Pick<PlexClient, "getState">;
   lastfm: Pick<LastFMClient, "getArtistInfo">;
   musicBrainz: Pick<MusicBrainzClient, "searchArtist" | "searchRelease">;
   fanartTV: Pick<FanartTVClient, "getArtistImages">;
@@ -37,11 +39,43 @@ function trackKey(track: EversoloTrack): string {
   return JSON.stringify([track.artist, track.title, track.album, track.source]);
 }
 
+async function readPlayback({ eversolo, plex }: PipelineClients) {
+  if (!plex) return eversolo.getState();
+  const [device, plexamp] = await Promise.allSettled([
+    eversolo.getState(),
+    plex.getState(),
+  ]);
+  if (
+    device.status === "fulfilled" &&
+    device.value.playState === "playing" &&
+    device.value.track
+  ) {
+    return device.value;
+  }
+  if (
+    plexamp.status === "fulfilled" &&
+    plexamp.value.playState === "playing" &&
+    plexamp.value.track
+  ) {
+    return plexamp.value;
+  }
+  if (
+    device.status === "fulfilled" &&
+    device.value.track &&
+    device.value.playState !== "idle"
+  ) {
+    return device.value;
+  }
+  if (plexamp.status === "fulfilled") return plexamp.value;
+  if (device.status === "fulfilled") return device.value;
+  throw device.reason;
+}
+
 export function createNowPlayingPipeline(
   clients: PipelineClients,
   redis: PipelineRedis
 ): NowPlayingPipeline {
-  const { eversolo, lastfm, musicBrainz, fanartTV, coverArt } = clients;
+  const { lastfm, musicBrainz, fanartTV, coverArt } = clients;
 
   let cachedTrackKey: string | null = null;
   let cachedEnrichment: Awaited<ReturnType<typeof enrichNowPlaying>> | null =
@@ -54,7 +88,7 @@ export function createNowPlayingPipeline(
 
   const poll = async (): Promise<void> => {
     try {
-      const { track, playState } = await eversolo.getState();
+      const { track, playState } = await readPlayback(clients);
 
       if (!track || playState === "idle") {
         if (cachedTrackKey) {

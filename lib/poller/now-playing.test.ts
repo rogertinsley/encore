@@ -72,6 +72,37 @@ describe("NowPlayingPipeline", () => {
     expect(stored.playState).toBe("playing");
   });
 
+  it("publishes Plexamp playback when EverSolo is paused", async () => {
+    const c = makeClients();
+    const r = makeRedis();
+    c.eversolo.getState.mockResolvedValue({
+      ...playingState(),
+      playState: "paused",
+    });
+    c.lastfm.getArtistInfo.mockResolvedValue(null);
+    c.musicBrainz.searchArtist.mockResolvedValue(null);
+    c.musicBrainz.searchRelease.mockResolvedValue(null);
+    const plex = {
+      getState: vi.fn().mockResolvedValue({
+        ...playingState(),
+        track: {
+          ...playingState().track,
+          title: "Plex track",
+          source: "plexamp",
+        },
+      }),
+    };
+
+    createNowPlayingPipeline({ ...c, plex }, r).start();
+    await vi.waitFor(() => expect(r.setex).toHaveBeenCalledOnce());
+
+    expect(JSON.parse(r.setex.mock.calls[0][2])).toMatchObject({
+      trackName: "Plex track",
+      source: "plexamp",
+      playState: "playing",
+    });
+  });
+
   it("skips enrichment on subsequent polls for the same track", async () => {
     const c = makeClients();
     const r = makeRedis();

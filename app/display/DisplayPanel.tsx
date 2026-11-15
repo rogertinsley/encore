@@ -49,7 +49,7 @@ function usePanelData(tab: DisplayPanelTab, data: EnrichedNowPlaying) {
   }, [tab, key]);
 
   useEffect(() => {
-    if (tab !== "queue") return;
+    if (tab !== "queue" || data.source === "plexamp") return;
     const controller = new AbortController();
     const refresh = () => {
       fetch("/api/eversolo/queue", { signal: controller.signal })
@@ -66,7 +66,7 @@ function usePanelData(tab: DisplayPanelTab, data: EnrichedNowPlaying) {
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [tab]);
+  }, [tab, data.source]);
 
   useEffect(() => {
     setAlbumYear(null);
@@ -103,6 +103,8 @@ export function DisplayPanel({
   position: number;
 }) {
   const { lyrics, lyricsLoading, queue, albumYear } = usePanelData(tab, data);
+  const tabs =
+    data.source === "plexamp" ? TABS.filter((item) => item !== "queue") : TABS;
   const start = useRef<{ x: number; y: number } | null>(null);
   const activeLineRef = useRef<HTMLParagraphElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -155,8 +157,8 @@ export function DisplayPanel({
     const dx = event.changedTouches[0].clientX - origin.x;
     const dy = event.changedTouches[0].clientY - origin.y;
     if (Math.abs(dx) < 65 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
-    const next = TABS.indexOf(tab) + (dx < 0 ? 1 : -1);
-    if (next >= 0 && next < TABS.length) onTabChange(TABS[next]);
+    const next = tabs.indexOf(tab) + (dx < 0 ? 1 : -1);
+    if (next >= 0 && next < tabs.length) onTabChange(tabs[next]);
   };
 
   return (
@@ -196,7 +198,7 @@ export function DisplayPanel({
           </button>
         </header>
         <nav className={styles.panelTabs} aria-label="Display details">
-          {TABS.map((item) => (
+          {tabs.map((item) => (
             <button
               key={item}
               type="button"
@@ -237,7 +239,9 @@ export function DisplayPanel({
                     <dd>
                       {data.source === "radioparadise"
                         ? "Radio Paradise"
-                        : data.source}
+                        : data.source === "plexamp"
+                          ? "Plexamp"
+                          : data.source}
                     </dd>
                   </div>
                 )}

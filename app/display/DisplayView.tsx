@@ -164,7 +164,11 @@ function PlaybackControls({
 
 function AudioQuality({ data }: { data: EnrichedNowPlaying }) {
   const parts = [
-    data.source === "radioparadise" ? "Radio Paradise" : data.source,
+    data.source === "radioparadise"
+      ? "Radio Paradise"
+      : data.source === "plexamp"
+        ? "Plexamp"
+        : data.source,
     data.audioFormat?.extension,
     data.audioFormat?.bits && data.audioFormat.bits !== "0"
       ? `${data.audioFormat.bits}-bit`
@@ -416,7 +420,7 @@ export function DisplayView({
               ) : (
                 <div className={styles.liveProgress}>LIVE STREAM</div>
               )}
-              {preferences.controls && (
+              {preferences.controls && data.source !== "plexamp" && (
                 <PlaybackControls state={data.playState} />
               )}
               {preferences.quality && <AudioQuality data={data} />}
@@ -442,9 +446,11 @@ export function DisplayView({
                 <button type="button" onClick={() => setPanel("lyrics")}>
                   Lyrics
                 </button>
-                <button type="button" onClick={() => setPanel("queue")}>
-                  Queue
-                </button>
+                {data.source !== "plexamp" && (
+                  <button type="button" onClick={() => setPanel("queue")}>
+                    Queue
+                  </button>
+                )}
                 <Link href="/shelf">Shelf</Link>
               </div>
               {data.artistName && (
@@ -476,7 +482,7 @@ export function DisplayView({
       )}
       {panel && data && !idle && (
         <DisplayPanel
-          tab={panel}
+          tab={panel === "queue" && data.source === "plexamp" ? "info" : panel}
           onTabChange={setPanel}
           onClose={closePanel}
           data={data}

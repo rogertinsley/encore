@@ -213,9 +213,9 @@ function AudioQualityBadge({
 
   return (
     <p className="font-mono text-xs text-white/35 tabular-nums shrink-0 flex items-center gap-1.5">
-      {source === "qobuz" && (
+      {(source === "qobuz" || source === "plexamp") && (
         <span className="text-white/55 font-sans font-medium tracking-wide">
-          Qobuz
+          {source === "plexamp" ? "Plexamp" : "Qobuz"}
         </span>
       )}
       {qualityParts.length > 0 && <span>{qualityParts.join(" · ")}</span>}
@@ -588,7 +588,9 @@ function NowPlayingCard({
           </div>
 
           {/* Playback controls */}
-          <PlayerControls playState={data.playState} />
+          {data.source !== "plexamp" && (
+            <PlayerControls playState={data.playState} />
+          )}
         </div>
 
         {/* Row 2: eq + status + time + quality (hidden on very small screens or collapsed) */}
@@ -633,8 +635,11 @@ export function NowPlayingView() {
   const shownIdRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const isPlexamp = latest?.source === "plexamp";
+
   // Fetch and refresh queue every 5s
   useEffect(() => {
+    if (isPlexamp) return;
     const fetchQueue = () => {
       fetch("/api/eversolo/queue")
         .then((r) => r.json())
@@ -644,7 +649,7 @@ export function NowPlayingView() {
     fetchQueue();
     const id = setInterval(fetchQueue, 5_000);
     return () => clearInterval(id);
-  }, []);
+  }, [isPlexamp]);
 
   // Fetch lyrics whenever the track changes
   useEffect(() => {
@@ -745,7 +750,11 @@ export function NowPlayingView() {
           transition: transitionStyle,
         }}
       >
-        <NowPlayingCard data={displayed} lyrics={lyrics} queue={queue} />
+        <NowPlayingCard
+          data={displayed}
+          lyrics={lyrics}
+          queue={displayed?.source === "plexamp" ? null : queue}
+        />
       </div>
     </div>
   );
