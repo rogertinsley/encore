@@ -196,7 +196,8 @@ export function ArtistView({ artistName }: { artistName: string }) {
               const match = lidarr?.topAlbums.find(
                 (item) => item.name === album.name
               );
-              const mbid = match?.lidarrMbid ?? album.mbid;
+              const mbid =
+                match?.lidarrMbid ?? album.releaseGroupMbid ?? album.mbid;
               return (
                 <div key={album.name} className="flex flex-col gap-1.5">
                   <div className="aspect-square rounded-lg overflow-hidden bg-warm-800">

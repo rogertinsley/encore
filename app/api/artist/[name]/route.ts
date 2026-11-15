@@ -37,7 +37,7 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   const { name } = await params;
-  const cacheKey = `artist-page:v2:${name.toLowerCase()}`;
+  const cacheKey = `artist-page:v3:${name.toLowerCase()}`;
   const searchParams = new URL(request.url).searchParams;
   const detailsOnly = searchParams.get("details") === "1";
   const readArtist = () =>
@@ -63,7 +63,9 @@ export async function GET(
     albumsPromise,
   ]);
   const topAlbums = data.topAlbums.map((album) => {
-    const lidarrMbid = resolveArtistAlbumMbid(albums, album, data.mbid);
+    const lidarrMbid =
+      album.releaseGroupMbid ??
+      resolveArtistAlbumMbid(albums, album, data.mbid);
     return { ...album, lidarrMbid, lidarrStatus: progress(lidarrMbid) };
   });
 

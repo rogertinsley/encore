@@ -29,6 +29,12 @@ function toCatalogRelease(group: ReleaseGroup) {
   };
 }
 
+export class MusicBrainzResponseError extends Error {
+  constructor(readonly status: number) {
+    super(`MusicBrainz API error: ${status}`);
+  }
+}
+
 const BASE_URL = "https://musicbrainz.org/ws/2";
 const USER_AGENT = "MusicRecommender/1.0";
 
@@ -73,8 +79,7 @@ export class MusicBrainzClient {
       await response.body?.cancel();
       response = await request();
     }
-    if (!response.ok)
-      throw new Error(`MusicBrainz API error: ${response.status}`);
+    if (!response.ok) throw new MusicBrainzResponseError(response.status);
     return response.json() as Promise<T>;
   }
 
@@ -146,11 +151,33 @@ export class MusicBrainzClient {
     };
   }
 
-  async lookupCatalogRelease(mbid: string) {
-    const data = await this.fetch<ReleaseGroup>(`/release-group/${mbid}`, {
-      inc: "artist-credits",
+  async lookupCatalogRelease(mbid: string, preferEdition = false) {
+    const lookupGroup = () =>
+      this.fetch<ReleaseGroup>(
+        `/release-group/${mbid}`,
+        { inc: "artist-credits" },
+        86400
+      );
+    const lookupEdition = async () => {
+      const edition = await this.fetch<{
+        "release-group": ReleaseGroup;
+        "artist-credit"?: ReleaseGroup["artist-credit"];
+      }>(`/release/${mbid}`, { inc: "release-groups+artist-credits" }, 86400);
+      return {
+        ...edition["release-group"],
+        "artist-credit":
+          edition["release-group"]?.["artist-credit"] ??
+          edition["artist-credit"],
+      };
+    };
+    const lookup = preferEdition ? lookupEdition : lookupGroup;
+    const fallback = preferEdition ? lookupGroup : lookupEdition;
+    const group = await lookup().catch((error: unknown) => {
+      if (error instanceof MusicBrainzResponseError && error.status === 404)
+        return fallback();
+      throw error;
     });
-    return toCatalogRelease(data);
+    return toCatalogRelease(group);
   }
 
   async searchArtist(name: string): Promise<string | null> {

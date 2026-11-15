@@ -4,6 +4,7 @@ import {
   LidarrReleaseActionError,
   requestReleaseSearch,
 } from "@/lib/lidarr/releases";
+import { MusicBrainzResponseError } from "@/lib/musicbrainz/client";
 import { isSameOrigin } from "@/lib/request-origin";
 
 export async function POST(
@@ -30,9 +31,21 @@ export async function POST(
     );
   }
 
+  const release = await clients.musicBrainz
+    .lookupCatalogRelease(mbid)
+    .catch((error: unknown) => {
+      if (error instanceof MusicBrainzResponseError && error.status === 404)
+        return null;
+      return undefined;
+    });
+  if (release === undefined) {
+    return NextResponse.json(
+      { message: "MusicBrainz is unavailable. Try the search again shortly." },
+      { status: 502 }
+    );
+  }
   try {
-    const release = await clients.musicBrainz.lookupCatalogRelease(mbid);
-    if (!release.artistName || !release.title) {
+    if (!release?.mbid || !release.artistName || !release.title) {
       return NextResponse.json(
         { message: "Could not verify this release" },
         { status: 409 }

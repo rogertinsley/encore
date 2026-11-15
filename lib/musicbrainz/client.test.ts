@@ -184,3 +184,37 @@ describe("MusicBrainzClient", () => {
     });
   });
 });
+
+it("resolves an edition to the album group after a group lookup misses", async () => {
+  const fetchMock = vi
+    .spyOn(global, "fetch")
+    .mockResolvedValueOnce(new Response(null, { status: 404 }))
+    .mockResolvedValueOnce(
+      Response.json({
+        title: "Travels in Constants, Volume 21: The Rescue",
+        "artist-credit": [{ name: "Explosions in the Sky" }],
+        "release-group": {
+          id: "rescue-group",
+          title: "The Rescue",
+          "first-release-date": "2005-09-27",
+        },
+      })
+    );
+
+  try {
+    const release = await new MusicBrainzClient(0).lookupCatalogRelease(
+      "edition"
+    );
+    expect(release).toMatchObject({
+      mbid: "rescue-group",
+      title: "The Rescue",
+      artistName: "Explosions in the Sky",
+      releaseDate: "2005-09-27",
+    });
+    expect(new URL(String(fetchMock.mock.calls[1][0])).pathname).toBe(
+      "/ws/2/release/edition"
+    );
+  } finally {
+    fetchMock.mockRestore();
+  }
+});

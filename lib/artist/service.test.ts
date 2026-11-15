@@ -10,7 +10,7 @@ const mockClients = {
   },
   musicBrainz: {
     searchArtist: vi.fn(),
-    getReleaseGroupYear: vi.fn(),
+    lookupCatalogRelease: vi.fn(),
   },
   fanartTV: {
     getArtistImages: vi.fn(),
@@ -32,6 +32,7 @@ beforeEach(() => {
   });
   mockClients.lastfm.getTopTracks.mockResolvedValue([{ name: "Creep" }]);
   mockClients.lastfm.getTopAlbums.mockResolvedValue([]);
+  mockClients.musicBrainz.lookupCatalogRelease.mockResolvedValue(null);
   mockClients.lastfm.getSimilarArtists.mockResolvedValue([]);
   mockClients.musicBrainz.searchArtist.mockResolvedValue("mbid-rh");
   mockClients.fanartTV.getArtistImages.mockResolvedValue({
@@ -101,12 +102,16 @@ describe("getArtistPageData", () => {
     mockClients.coverArt.getAlbumArtByReleaseGroup.mockResolvedValue(
       "http://example.com/cover.jpg"
     );
-    mockClients.musicBrainz.getReleaseGroupYear.mockResolvedValue(1997);
+    mockClients.musicBrainz.lookupCatalogRelease.mockResolvedValue({
+      mbid: "release-group-mbid",
+      releaseDate: "1997-05-21",
+    });
 
     const data = await getArtistPageData("Radiohead", mockClients, "testuser");
 
     expect(data.topAlbums[0].coverArtUrl).toBe("http://example.com/cover.jpg");
     expect(data.topAlbums[0].year).toBe(1997);
+    expect(data.topAlbums[0].releaseGroupMbid).toBe("release-group-mbid");
   });
 
   it("falls back to Last.FM imageUrl when cover art is unavailable", async () => {
@@ -119,7 +124,7 @@ describe("getArtistPageData", () => {
       },
     ]);
     mockClients.coverArt.getAlbumArtByReleaseGroup.mockResolvedValue(null);
-    mockClients.musicBrainz.getReleaseGroupYear.mockResolvedValue(null);
+    mockClients.musicBrainz.lookupCatalogRelease.mockResolvedValue(null);
 
     const data = await getArtistPageData("Radiohead", mockClients, "testuser");
 
@@ -162,7 +167,7 @@ describe("getArtistPageData", () => {
       },
     ]);
     mockClients.coverArt.getAlbumArtByReleaseGroup.mockResolvedValue(null);
-    mockClients.musicBrainz.getReleaseGroupYear.mockResolvedValue(null);
+    mockClients.musicBrainz.lookupCatalogRelease.mockResolvedValue(null);
 
     const data = await getArtistPageData("Radiohead", mockClients, "testuser");
 
@@ -177,7 +182,7 @@ describe("getArtistPageData", () => {
     mockClients.coverArt.getAlbumArtByReleaseGroup
       .mockResolvedValueOnce("http://example.com/ok.jpg") // OK Computer succeeds
       .mockRejectedValueOnce(new Error("not found")); // Kid A fails
-    mockClients.musicBrainz.getReleaseGroupYear.mockResolvedValue(null);
+    mockClients.musicBrainz.lookupCatalogRelease.mockResolvedValue(null);
 
     const data = await getArtistPageData("Radiohead", mockClients, "testuser");
 

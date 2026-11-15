@@ -15,7 +15,11 @@ export interface ArtistPageData {
   artistImages: ArtistImages | null;
   topTracks: TopTrack[];
   topAlbums: Array<
-    TopAlbum & { coverArtUrl: string | null; year: number | null }
+    TopAlbum & {
+      coverArtUrl: string | null;
+      year: number | null;
+      releaseGroupMbid: string | null;
+    }
   >;
   similarArtists: SimilarArtist[];
 }
@@ -25,7 +29,7 @@ type Clients = {
     LastFMClient,
     "getArtistInfo" | "getTopTracks" | "getTopAlbums" | "getSimilarArtists"
   >;
-  musicBrainz: Pick<MusicBrainzClient, "searchArtist" | "getReleaseGroupYear">;
+  musicBrainz: Pick<MusicBrainzClient, "searchArtist" | "lookupCatalogRelease">;
   fanartTV: Pick<FanartTVClient, "getArtistImages">;
   coverArt: Pick<CoverArtArchiveClient, "getAlbumArtByReleaseGroup">;
 };
@@ -51,12 +55,12 @@ export async function getArtistPageData(
 
   const topAlbumsWithArt = await Promise.all(
     topAlbums.map(async (album) => {
-      const [coverArtUrl, year] = await Promise.all([
+      const [coverArtUrl, release] = await Promise.all([
         album.mbid
           ? coverArt.getAlbumArtByReleaseGroup(album.mbid).catch(() => null)
           : null,
         album.mbid
-          ? musicBrainz.getReleaseGroupYear(album.mbid).catch(() => null)
+          ? musicBrainz.lookupCatalogRelease(album.mbid, true).catch(() => null)
           : null,
       ]);
       return {
@@ -66,7 +70,10 @@ export async function getArtistPageData(
           (album.imageUrl?.includes(LASTFM_PLACEHOLDER)
             ? null
             : album.imageUrl),
-        year,
+        releaseGroupMbid: release?.mbid ?? null,
+        year: release?.releaseDate
+          ? Number(release.releaseDate.slice(0, 4)) || null
+          : null,
       };
     })
   );
