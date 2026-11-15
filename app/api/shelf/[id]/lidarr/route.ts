@@ -29,7 +29,7 @@ export async function POST(
   const item = await prisma.listeningShelfItem.findUnique({ where: { id } });
   if (!item)
     return NextResponse.json({ error: "Item not found" }, { status: 404 });
-  const albums = await getLidarrAlbums();
+  const albums = await getLidarrAlbums(true);
   if (!albums)
     return NextResponse.json({ error: "Lidarr unavailable" }, { status: 503 });
   const album = findShelfAlbum(albums, item);

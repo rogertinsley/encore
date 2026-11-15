@@ -1,6 +1,12 @@
 import { expect, it, vi } from "vitest";
 import { getReleaseProgress } from "./progress";
 
+vi.mock("@/lib/redis", async () => ({
+  redis: (
+    await import("@/lib/utils/redis-snapshot.test-fixture")
+  ).createTestRedis(),
+}));
+
 it("matches queue and search progress by album ID and prefers completed imports", async () => {
   vi.stubEnv("LIDARR_API_KEY", "test-key");
   vi.stubGlobal(

@@ -1,3 +1,7 @@
+import {
+  invalidateRedisSnapshot,
+  readRedisSnapshot,
+} from "@/lib/utils/redis-snapshot";
 import { sameName } from "@/lib/shelf";
 import { lidarrRequest } from "./client";
 
@@ -5,6 +9,27 @@ interface LidarrArtist {
   id: number;
   artistName: string;
   foreignArtistId: string;
+}
+
+const ARTISTS_KEY = "lidarr:artists:v1";
+
+export async function getLidarrArtists(): Promise<LidarrArtist[] | null> {
+  if (!process.env.LIDARR_API_KEY) return null;
+  return readRedisSnapshot(
+    ARTISTS_KEY,
+    { freshFor: 90, retainFor: 3600 },
+    async () => {
+      const result = await lidarrRequest("api/v1/artist");
+      if (!Array.isArray(result)) throw new Error("Invalid Lidarr artist list");
+      return (result as LidarrArtist[]).map(
+        ({ id, artistName, foreignArtistId }) => ({
+          id,
+          artistName,
+          foreignArtistId,
+        })
+      );
+    }
+  ).catch(() => null);
 }
 
 interface RootFolder {
@@ -62,6 +87,7 @@ async function registerOnce(
     const existing = artists.find((artist) => artist.foreignArtistId === key);
     if (existing) return { artist: existing, added: false };
     const artist = await registerArtist(match, monitor);
+    if (artist) await invalidateRedisSnapshot(ARTISTS_KEY);
     return { artist, added: Boolean(artist) };
   })();
   pendingRegistrations.set(key, request);
@@ -76,19 +102,14 @@ export async function getLidarrArtistStatus(
   artistName: string,
   mbid: string | null
 ): Promise<boolean | null> {
-  if (!process.env.LIDARR_API_KEY) return null;
-  try {
-    const artists = (await lidarrRequest("api/v1/artist")) as LidarrArtist[];
-    return mbid
-      ? artists.some(
-          (artist) =>
-            artist.foreignArtistId?.toLowerCase() === mbid.toLowerCase()
-        )
-      : artists.filter((artist) => sameName(artist.artistName, artistName))
-          .length === 1;
-  } catch {
-    return null;
-  }
+  const artists = await getLidarrArtists();
+  if (!artists) return null;
+  return mbid
+    ? artists.some(
+        (artist) => artist.foreignArtistId?.toLowerCase() === mbid.toLowerCase()
+      )
+    : artists.filter((artist) => sameName(artist.artistName, artistName))
+        .length === 1;
 }
 
 export async function ensureReleaseArtist(mbid: string) {

@@ -1,6 +1,10 @@
 /** MusicBrainz release-group status and explicit Lidarr album actions. */
 import { sameName } from "@/lib/shelf";
-import { LIDARR_WEB_URL, lidarrRequest } from "./client";
+import { lidarrRequest } from "./client";
+import {
+  invalidateRedisSnapshot,
+  readRedisSnapshot,
+} from "@/lib/utils/redis-snapshot";
 import { ensureReleaseArtist } from "./artists";
 
 export { LIDARR_WEB_URL, lidarrRequest } from "./client";
@@ -59,8 +63,7 @@ export async function monitorShelfAlbum(album: LidarrAlbum): Promise<void> {
     albumIds: [album.id],
     monitored: true,
   });
-  cachedAlbums = null;
-  cacheUntil = 0;
+  await invalidateRedisSnapshot(ALBUMS_KEY);
 }
 
 export async function addShelfAlbum(
@@ -123,15 +126,11 @@ export async function addShelfAlbum(
     monitored: true,
     addOptions: { searchForNewAlbum: false },
   })) as LidarrAlbum;
-  cachedAlbums = null;
-  cacheUntil = 0;
+  await invalidateRedisSnapshot(ALBUMS_KEY);
   return added;
 }
 
-let cachedAlbums: Map<string, LidarrAlbum> | null = null;
-let cacheUntil = 0;
-let pending: Promise<Map<string, LidarrAlbum> | null> | null = null;
-const CACHE_MS = 2 * 60 * 1000;
+const ALBUMS_KEY = "lidarr:albums:v1";
 
 function hasAllTracks(album: LidarrAlbum): boolean {
   const files = album.statistics?.trackFileCount ?? 0;
@@ -240,48 +239,41 @@ export async function requestReleaseSearch(
   }
 }
 
-async function fetchAlbums(): Promise<Map<string, LidarrAlbum> | null> {
-  const baseUrl = process.env.LIDARR_URL || LIDARR_WEB_URL;
-  const apiKey = process.env.LIDARR_API_KEY;
-  if (!apiKey) return null;
-
-  try {
-    const url = new URL("api/v1/album", `${baseUrl.replace(/\/$/, "")}/`);
-    if (!["http:", "https:"].includes(url.protocol)) return null;
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": apiKey },
-      signal: AbortSignal.timeout(5000),
-      cache: "no-store",
-    });
-    if (!response.ok) throw new Error(`Lidarr returned ${response.status}`);
-    const data: unknown = await response.json();
-    if (!Array.isArray(data)) throw new Error("Unexpected Lidarr response");
-    const albums = new Map<string, LidarrAlbum>();
-    for (const item of data) {
-      if (!item || typeof item !== "object") continue;
-      const album = item as LidarrAlbum;
-      if (typeof album.foreignAlbumId === "string") {
-        albums.set(album.foreignAlbumId.toLowerCase(), album);
-      }
-    }
-    cachedAlbums = albums;
-    cacheUntil = Date.now() + CACHE_MS;
-    return albums;
-  } catch (error) {
-    console.warn("[Lidarr] Could not load album status", error);
-    // An outage should be shown as unknown, not as an empty library.
-    return null;
-  }
+async function fetchAlbums(): Promise<LidarrAlbum[]> {
+  const data = await lidarrRequest("api/v1/album");
+  if (!Array.isArray(data)) throw new Error("Unexpected Lidarr album list");
+  return (data as LidarrAlbum[])
+    .filter((album) => typeof album?.foreignAlbumId === "string")
+    .map(({ id, title, artist, foreignAlbumId, monitored, statistics }) => ({
+      id,
+      title,
+      artist: artist && {
+        artistName: artist.artistName,
+        foreignArtistId: artist.foreignArtistId,
+      },
+      foreignAlbumId,
+      monitored,
+      statistics,
+    }));
 }
 
-export async function getLidarrAlbums(): Promise<Map<
-  string,
-  LidarrAlbum
-> | null> {
-  if (cachedAlbums && Date.now() < cacheUntil) return cachedAlbums;
-  if (!pending)
-    pending = fetchAlbums().finally(() => {
-      pending = null;
-    });
-  return pending;
+export async function getLidarrAlbums(
+  fresh = false
+): Promise<Map<string, LidarrAlbum> | null> {
+  if (!process.env.LIDARR_API_KEY) return null;
+  try {
+    const albums = fresh
+      ? await fetchAlbums()
+      : await readRedisSnapshot(
+          ALBUMS_KEY,
+          { freshFor: 15, retainFor: 1800 },
+          fetchAlbums
+        );
+    return new Map(
+      albums.map((album) => [album.foreignAlbumId!.toLowerCase(), album])
+    );
+  } catch (error) {
+    console.warn("[Lidarr] Could not load album status", error);
+    return null;
+  }
 }

@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ReleaseAction } from "@/app/components/ReleaseAction";
-import type { ArtistResponse } from "@/app/api/artist/[name]/route";
+import type {
+  ArtistLidarrStatus,
+  ArtistResponse,
+} from "@/app/api/artist/[name]/route";
 import { stripBio } from "@/lib/utils/bio";
 import { AddArtistButton } from "./AddArtistButton";
 
@@ -16,12 +19,42 @@ export function ArtistView({ artistName }: { artistName: string }) {
   const [data, setData] = useState<ArtistResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [lidarr, setLidarr] = useState<ArtistLidarrStatus | null>(null);
+  const [lidarrLoading, setLidarrLoading] = useState(true);
+
   useEffect(() => {
-    fetch(`/api/artist/${encodeURIComponent(artistName)}`)
-      .then((r) => r.json())
-      .then((json: ArtistResponse) => setData(json))
-      .catch(() => null)
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+    const path = `/api/artist/${encodeURIComponent(artistName)}`;
+    setLoading(true);
+    setData(null);
+    setLidarr(null);
+    setLidarrLoading(true);
+
+    async function read<T>(url: string): Promise<T> {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error("Could not load artist");
+      return response.json();
+    }
+
+    async function load() {
+      try {
+        const details = await read<ArtistResponse>(`${path}?details=1`);
+        if (controller.signal.aborted) return;
+        setData(details);
+        setLoading(false);
+        if (details.lidarrConfigured) {
+          const status = await read<ArtistLidarrStatus>(`${path}?status=1`);
+          if (!controller.signal.aborted) setLidarr(status);
+        }
+      } catch {
+        if (!controller.signal.aborted) setLoading(false);
+      } finally {
+        if (!controller.signal.aborted) setLidarrLoading(false);
+      }
+    }
+
+    void load();
+    return () => controller.abort();
   }, [artistName]);
 
   if (loading) {
@@ -93,11 +126,11 @@ export function ArtistView({ artistName }: { artistName: string }) {
         </div>
       </div>
 
-      {data.lidarrTracked === true ? (
+      {lidarr?.lidarrTracked === true ? (
         <p className="text-sm font-medium text-emerald-300">In Lidarr</p>
-      ) : data.lidarrConfigured && data.lidarrTracked === false ? (
+      ) : lidarr?.lidarrTracked === false ? (
         <AddArtistButton key={data.name} artistName={data.name} />
-      ) : data.lidarrConfigured ? (
+      ) : data.lidarrConfigured && !lidarrLoading ? (
         <p className="text-sm text-warm-300">Lidarr status unavailable</p>
       ) : null}
 
@@ -185,7 +218,10 @@ export function ArtistView({ artistName }: { artistName: string }) {
                         ? `/api/releases/${album.mbid}/lidarr`
                         : null
                     }
-                    status={album.lidarrStatus}
+                    status={
+                      lidarr?.topAlbums.find((item) => item.mbid === album.mbid)
+                        ?.lidarrStatus ?? null
+                    }
                     releaseDate={album.year?.toString()}
                   />
                 ) : (

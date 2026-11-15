@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { getLidarrArtistStatus, requestArtistAdd } from "./artists";
 
+vi.mock("@/lib/redis", async () => ({
+  redis: (
+    await import("@/lib/utils/redis-snapshot.test-fixture")
+  ).createTestRedis(),
+}));
+
 const artist = { id: 42, artistName: "Björk", foreignArtistId: "artist-id" };
 
 beforeEach(() => vi.stubEnv("LIDARR_API_KEY", "test-key"));

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { clients } from "@/lib/clients";
-import { normalizeTrack } from "@/lib/lastfm/transforms";
+import { getRecentListening } from "@/lib/lastfm/recent-snapshot";
 import { getReleaseProgress } from "@/lib/lidarr/progress";
 
 export async function GET() {
@@ -15,7 +14,7 @@ export async function GET() {
         orderBy: { score: "desc" },
         take: 12,
       }),
-      clients.lastfm.getRecentTracks(process.env.LASTFM_USERNAME ?? "", 15),
+      getRecentListening(15),
       getReleaseProgress(),
     ]);
 
@@ -33,9 +32,6 @@ export async function GET() {
         : [],
     recommendations:
       recommendations.status === "fulfilled" ? recommendations.value : [],
-    recentTracks:
-      recentTracks.status === "fulfilled"
-        ? recentTracks.value.map(normalizeTrack)
-        : [],
+    recentTracks: recentTracks.status === "fulfilled" ? recentTracks.value : [],
   });
 }

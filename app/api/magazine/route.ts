@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { clients } from "@/lib/clients";
 import type { EnrichedNowPlaying } from "@/lib/enrichment/now-playing";
-import { normalizeTrack } from "@/lib/lastfm/transforms";
-import { lidarrRequest } from "@/lib/lidarr/releases";
+import { getRecentListening } from "@/lib/lastfm/recent-snapshot";
+import { getLidarrArtists } from "@/lib/lidarr/artists";
 import { getReleaseProgress } from "@/lib/lidarr/progress";
 import { NOW_PLAYING_KEY } from "@/lib/poller/now-playing";
 import { prisma } from "@/lib/prisma";
@@ -44,11 +43,9 @@ async function readMagazine() {
         orderBy: { score: "desc" },
         take: 50,
       }),
-      clients.lastfm.getRecentTracks(process.env.LASTFM_USERNAME ?? "", 8),
+      getRecentListening(8),
       getReleaseProgress(),
-      lidarrConfigured
-        ? (lidarrRequest("api/v1/artist") as Promise<{ artistName: string }[]>)
-        : null,
+      getLidarrArtists(),
       redis.get(NOW_PLAYING_KEY),
       redis.get("lidarr:weekly-release-run"),
     ]);
@@ -126,8 +123,7 @@ async function readMagazine() {
             playState: track.playState,
           }
         : null,
-    recentTracks:
-      recent.status === "fulfilled" ? recent.value.map(normalizeTrack) : [],
+    recentTracks: recent.status === "fulfilled" ? recent.value : [],
   };
 }
 

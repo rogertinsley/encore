@@ -5,6 +5,12 @@ import {
   statusForRelease,
 } from "./releases";
 
+vi.mock("@/lib/redis", async () => ({
+  redis: (
+    await import("@/lib/utils/redis-snapshot.test-fixture")
+  ).createTestRedis(),
+}));
+
 const mbid = "A2A2D638-ACD1-4BAE-BFA2-3BC23942E7FE";
 
 describe("Lidarr new-release status", () => {
@@ -45,13 +51,13 @@ describe("Lidarr new-release status", () => {
       getLidarrAlbums(),
       getLidarrAlbums(),
     ]);
-    expect(first).toBe(second);
+    expect(first).toEqual(second);
     expect(statusForRelease(mbid, first!)).toBe("unmonitored");
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock.mock.calls[0][1].headers).toEqual({
       "X-Api-Key": "test-key",
     });
-    expect(await getLidarrAlbums()).toBe(first);
+    expect(await getLidarrAlbums()).toEqual(first);
   });
 
   it("monitors an upcoming release without sending a search command", async () => {
