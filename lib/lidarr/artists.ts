@@ -72,6 +72,25 @@ async function registerOnce(
   }
 }
 
+export async function getLidarrArtistStatus(
+  artistName: string,
+  mbid: string | null
+): Promise<boolean | null> {
+  if (!process.env.LIDARR_API_KEY) return null;
+  try {
+    const artists = (await lidarrRequest("api/v1/artist")) as LidarrArtist[];
+    return mbid
+      ? artists.some(
+          (artist) =>
+            artist.foreignArtistId?.toLowerCase() === mbid.toLowerCase()
+        )
+      : artists.filter((artist) => sameName(artist.artistName, artistName))
+          .length === 1;
+  } catch {
+    return null;
+  }
+}
+
 export async function ensureReleaseArtist(mbid: string) {
   const candidates = (await lidarrRequest(
     `api/v1/artist/lookup?term=lidarr:${encodeURIComponent(mbid)}`
@@ -80,9 +99,9 @@ export async function ensureReleaseArtist(mbid: string) {
   return match ? (await registerOnce(match, "none")).artist : null;
 }
 
-async function addAndSearch(
+async function applyArtistRequest(
   artistName: string,
-  onlyIfNew: boolean
+  mode: "add" | "search" | "discover"
 ): Promise<ArtistSearchResult> {
   const term = encodeURIComponent(artistName);
   const matches = (
@@ -102,11 +121,14 @@ async function addAndSearch(
   }
 
   const [match] = matches;
-  const registration = await registerOnce(match, "all");
+  const registration = await registerOnce(
+    match,
+    mode === "add" ? "none" : "all"
+  );
   const existing = registration.added ? null : registration.artist;
 
   if (existing) {
-    if (onlyIfNew) {
+    if (mode !== "search") {
       return { ok: true, added: false, message: "Artist already in Lidarr" };
     }
     await lidarrRequest("api/v1/command", "POST", {
@@ -129,8 +151,17 @@ async function addAndSearch(
   return {
     ok: true,
     added: true,
-    message: "Artist added and album search requested",
+    message:
+      mode === "add"
+        ? "Artist added to Lidarr"
+        : "Artist added and album search requested",
   };
+}
+
+export function requestArtistAdd(
+  artistName: string
+): Promise<ArtistSearchResult> {
+  return applyArtistRequest(artistName, "add");
 }
 
 export async function requestArtistSearch(
@@ -145,7 +176,10 @@ export async function requestArtistSearch(
     return requestArtistSearch(artistName, onlyIfNew);
   }
 
-  const request = addAndSearch(artistName, onlyIfNew);
+  const request = applyArtistRequest(
+    artistName,
+    onlyIfNew ? "discover" : "search"
+  );
   pending.set(key, { onlyIfNew, request });
   try {
     return await request;

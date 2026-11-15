@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ReleaseAction } from "@/app/components/ReleaseAction";
 import type { ArtistResponse } from "@/app/api/artist/[name]/route";
 import { stripBio } from "@/lib/utils/bio";
+import { AddArtistButton } from "./AddArtistButton";
 
 function formatNumber(n: number): string {
   return new Intl.NumberFormat("en-GB").format(n);
@@ -91,6 +92,14 @@ export function ArtistView({ artistName }: { artistName: string }) {
           </div>
         </div>
       </div>
+
+      {data.lidarrTracked === true ? (
+        <p className="text-sm font-medium text-emerald-300">In Lidarr</p>
+      ) : data.lidarrConfigured && data.lidarrTracked === false ? (
+        <AddArtistButton key={data.name} artistName={data.name} />
+      ) : data.lidarrConfigured ? (
+        <p className="text-sm text-warm-300">Lidarr status unavailable</p>
+      ) : null}
 
       {/* Tags */}
       {data.tags.length > 0 && (
