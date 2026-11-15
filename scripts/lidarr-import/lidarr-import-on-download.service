@@ -1,0 +1,10 @@
+[Unit]
+Description=Retry Lidarr imports after SABnzbd finishes a music download
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/unlink /srv/home-server/data/sabnzbd/config/scripts/encore-music.pending
+# Give Lidarr a chance to run its normal import before scanning failures.
+ExecStartPre=/usr/bin/sleep 120
+ExecStart=/usr/bin/systemctl --user start lidarr-import-report.service
+TimeoutStartSec=13min

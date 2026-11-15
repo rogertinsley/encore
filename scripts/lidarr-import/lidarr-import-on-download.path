@@ -1,0 +1,8 @@
+[Unit]
+Description=Watch for completed SABnzbd music downloads
+
+[Path]
+PathExists=/srv/home-server/data/sabnzbd/config/scripts/encore-music.pending
+
+[Install]
+WantedBy=default.target

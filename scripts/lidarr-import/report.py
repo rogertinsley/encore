@@ -78,10 +78,20 @@ def read_flac(path):
 def normalize(title):
     return ''.join(c for c in unicodedata.normalize('NFKC', title).casefold() if c.isalnum())
 
+def match_title(title, album, year=''):
+    if re.fullmatch(r'[0-9]{4}', year):
+        title = re.sub(rf'\s+\({year} Remaster\)$', '', title, flags=re.IGNORECASE)
+    # A venue repeated in the track title is redundant for this live edition.
+    suffix = re.search(r'\s+\((live (?:at|in) .+)\)$', title, re.IGNORECASE)
+    if suffix and normalize(album).endswith(normalize(suffix[1])):
+        title = title[:suffix.start()]
+    return normalize(title)
+
 def musicbrainz(path, **params):
-    url = 'https://musicbrainz.org/ws/2/' + path + '?' + urllib.parse.urlencode({'fmt': 'json', **params})
+    url = 'https://musicbrainz.org/ws/2/' + path + '?' + urllib.parse.urlencode({**params, 'fmt': 'json'})
     request = urllib.request.Request(url, headers={
-        'User-Agent': 'EncoreLidarrImport/1.0 (https://github.com/rogertinsley/encore)'
+        'User-Agent': 'EncoreLidarrImport/1.0 (https://github.com/rogertinsley/encore)',
+        'Accept': 'application/json',
     })
     try:
         with urllib.request.urlopen(request, timeout=15) as response:
@@ -125,7 +135,7 @@ def refresh_metadata(item, edition):
     marker = pathlib.Path(__file__).parent / f"refresh-{artist_id}-{edition['id']}"
     if marker.exists() and time.time() - marker.stat().st_mtime < 7 * 86400:
         return 'waiting for Lidarr metadata refresh'
-    lidarr(json.dumps({'name': 'RefreshArtist', 'artistId': artist_id}))
+    lidarr(json.dumps({'name': 'RefreshArtist', 'artistIds': [artist_id]}))
     marker.touch()
     return 'queued Lidarr metadata refresh'
 
@@ -142,14 +152,16 @@ def check(item):
     observed = {}
     tracks = {}
     metadata = []
+    track_tags = {}
     for path in files:
         tags, duration = read_flac(path)
         metadata.append(tags)
         position = (int(tags.get('DISCNUMBER','1').split('/')[0]), int(tags['TRACKNUMBER'].split('/')[0]))
         if position in observed or not tags.get('TITLE') or not duration:
             return 'missing or duplicate track metadata'
-        observed[position] = (normalize(tags['TITLE']), duration)
+        observed[position] = (match_title(tags['TITLE'], tags.get('ALBUM', '')), duration)
         tracks[position] = path
+        track_tags[position] = tags
     known = candidates.copy()
     matches = []
     differences = []
@@ -168,14 +180,23 @@ def check(item):
             return 'too many editions with the same track count'
         release = pending.pop(0)
         edition = musicbrainz('release/' + release, inc='recordings+artist-credits+release-groups')
-        expected = {(disc['position'], track['position']): (normalize(track['title']), track.get('length')) for disc in edition['media'] for track in disc['tracks']}
-        if expected.keys() == observed.keys() and all(length and title == observed[pos][0] and abs(length - observed[pos][1]) <= 3000 for pos, (title, length) in expected.items()):
+        edition_year = (edition.get('date') or '')[:4]
+        actual = {
+            position: (
+                match_title(tags['TITLE'], tags.get('ALBUM', ''),
+                            edition_year if tags.get('DATE', '')[:4] == edition_year else ''),
+                observed[position][1],
+            )
+            for position, tags in track_tags.items()
+        }
+        expected = {(disc['position'], track['position']): (match_title(track['title'], edition['title'], edition_year), track.get('length')) for disc in edition['media'] for track in disc['tracks']}
+        if expected.keys() == actual.keys() and all(length and title == actual[pos][0] and abs(length - actual[pos][1]) <= 3000 for pos, (title, length) in expected.items()):
             matches.append(edition)
         else:
-            common = expected.keys() & observed.keys()
-            title_count = sum(expected[pos][0] != observed[pos][0] for pos in common)
-            length_count = sum(not expected[pos][1] or abs(expected[pos][1] - observed[pos][1]) > 3000 for pos in common)
-            differences.append(f'{release}: {len(expected.keys() ^ observed.keys())} different positions, {title_count} different titles, {length_count} duration mismatches')
+            common = expected.keys() & actual.keys()
+            title_count = sum(expected[pos][0] != actual[pos][0] for pos in common)
+            length_count = sum(not expected[pos][1] or abs(expected[pos][1] - actual[pos][1]) > 3000 for pos in common)
+            differences.append(f'{release}: {len(expected.keys() ^ actual.keys())} different positions, {title_count} different titles, {length_count} duration mismatches')
     if len(matches) == 1:
         edition = matches[0]
         if edition['id'] in known:
@@ -234,12 +255,47 @@ def stage_and_import(item, edition, tracks, root):
     except Exception:
         shutil.rmtree(folder)
         raise
+    container_path = '/downloads/' + folder.relative_to(root).as_posix()
+    preview = lidarr(query='manualimport?' + urllib.parse.urlencode({
+        'folder': container_path, 'filterExistingFiles': 'false',
+        'replaceExistingFiles': 'false',
+    }))
+    files = []
+    track_ids = set()
+    albums = {}
+    for row in preview:
+        album = row.get('album') or {}
+        release = next((r for r in album.get('releases', [])
+                        if r.get('id') == row.get('albumReleaseId')), None)
+        if not release and album.get('foreignAlbumId') == edition['release-group']['id']:
+            if album['id'] not in albums:
+                albums[album['id']] = lidarr(query=f"album/{album['id']}")
+            full_album = albums[album['id']]
+            release = next((r for r in full_album['releases']
+                            if r['id'] == row.get('albumReleaseId')), None)
+        matched = row.get('tracks') or []
+        path = pathlib.PurePosixPath(row['path'])
+        if (not release or release['foreignReleaseId'] != edition['id']
+                or path.parent.as_posix() != container_path
+                or row.get('rejections') or len(matched) != 1):
+            marker.write_text(f'Import preview rejected: {folder}\n')
+            return marker.read_text().strip()
+        track_id = matched[0]['id']
+        track_ids.add(track_id)
+        files.append({
+            'path': row['path'], 'artistId': row['artist']['id'],
+            'albumId': album['id'], 'albumReleaseId': row['albumReleaseId'],
+            'trackIds': [track_id], 'quality': row['quality'],
+        })
+    if len(files) != len(tracks) or len(track_ids) != len(tracks):
+        marker.write_text(f'Import preview incomplete: {folder}\n')
+        return marker.read_text().strip()
+
     # Record intent before sending, since a timed-out POST may still queue an import.
     marker.write_text(f'Pending submission: {folder}\n')
     result = lidarr(json.dumps({
-        'name': 'DownloadedAlbumsScan',
-        'path': '/downloads/' + folder.relative_to(root).as_posix(),
-        'importMode': 'Move',
+        'name': 'ManualImport', 'files': files,
+        'importMode': 'Move', 'replaceExistingFiles': False,
     }))
     command_id = result['id']
     marker.write_text(f'Command {command_id}: {folder}\n')

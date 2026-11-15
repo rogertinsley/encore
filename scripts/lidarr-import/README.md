@@ -19,3 +19,15 @@ systemctl --user enable --now lidarr-import-report.timer
 systemctl --user start lidarr-import-report.service
 journalctl --user -u lidarr-import-report.service -n 20 --no-pager
 ```
+
+## Run after a music download
+
+On Endor, install `encore-music-complete.sh` as an executable in SABnzbd's
+`/config/scripts` directory. Set SABnzbd's scripts folder to `/config/scripts`
+and select the script for the `music` category. Install the
+`lidarr-import-on-download.path` and `lidarr-import-on-download.service`
+units in `~/.config/systemd/user/`, reload systemd, and enable the path unit.
+
+The hook signals Endor after successful music post-processing. The service waits
+two minutes for Lidarr's normal import and then invokes the same retry service
+as the daily timer. Other SABnzbd categories do not trigger the hook.
