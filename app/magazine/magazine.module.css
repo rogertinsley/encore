@@ -147,8 +147,8 @@
 }
 
 .releases {
-  border-left: 1px solid var(--rule);
-  padding-inline-start: clamp(1rem, 2.3vw, 2rem);
+  border-top: 3px double var(--rule);
+  padding-block: 1.15rem 1.75rem;
   min-width: 0;
 }
 
@@ -226,9 +226,9 @@
   cursor: pointer;
 }
 
-.action button:disabled {
+.action button[aria-disabled="true"] {
   color: var(--muted);
-  cursor: wait;
+  cursor: default;
 }
 
 .actionError,
@@ -246,19 +246,27 @@
 }
 
 .discovery {
-  border-top: 3px double var(--rule);
-  padding-block: 1.15rem 1.75rem;
+  border-left: 1px solid var(--rule);
+  padding-inline-start: clamp(1rem, 2.3vw, 2rem);
+  min-width: 0;
 }
 
 .picks {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+}
+
+.pick {
+  display: grid;
+  grid-template-columns: minmax(5rem, 25%) minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
+  border-top: 1px solid var(--rule);
+  padding-block: 0.85rem;
 }
 
 .pickArt {
   display: block;
-  aspect-ratio: 1.6;
+  aspect-ratio: 1;
 }
 
 .pickArt img {
@@ -266,7 +274,6 @@
 }
 
 .pick h3 {
-  margin-top: 0.68rem;
   font-size: clamp(1.45rem, 2.7vw, 2.2rem);
   line-height: 1;
   overflow-wrap: anywhere;
@@ -308,16 +315,10 @@
     gap: 1.4rem;
   }
 
-  .releases {
+  .discovery {
     border-left: 0;
     border-top: 1px solid var(--rule);
     padding: 0.9rem 0 0;
-  }
-
-  .releases ul {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 1rem;
   }
 }
 
@@ -329,27 +330,6 @@
 
   .featureArt {
     aspect-ratio: 4 / 3;
-  }
-
-  .releases ul,
-  .picks {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .pick {
-    display: grid;
-    grid-template-columns: minmax(5rem, 31%) minmax(0, 1fr);
-    gap: 0.9rem;
-    border-top: 1px solid var(--rule);
-    padding-top: 0.8rem;
-  }
-
-  .pickArt {
-    aspect-ratio: 1;
-  }
-
-  .pick h3 {
-    margin-top: 0;
   }
 }
 
@@ -377,8 +357,14 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.pickText {
-  border-top: 1px solid var(--rule);
+.pick:not(:has(.pickArt img)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.releases ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1.4rem;
 }
 
 .discoveryNote {
@@ -388,11 +374,7 @@
 }
 
 @media (max-width: 600px) {
-  .pick:not(:has(.pickArt img)) {
+  .releases ul {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .pickText {
-    border-top: 0;
   }
 }

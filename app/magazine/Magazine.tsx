@@ -79,6 +79,7 @@ function Action({ path, label }: { path: string; label: string }) {
   const [pending, setPending] = useState(false);
 
   async function submit() {
+    if (pending || result?.ok) return;
     setPending(true);
     setResult(null);
     try {
@@ -94,11 +95,13 @@ function Action({ path, label }: { path: string; label: string }) {
 
   return (
     <div className={styles.action}>
-      {(!result || !result.ok) && (
-        <button type="button" disabled={pending} onClick={submit}>
-          {pending ? "Sending…" : label}
-        </button>
-      )}
+      <button
+        type="button"
+        aria-disabled={pending || result?.ok || undefined}
+        onClick={submit}
+      >
+        {pending ? "Sending…" : label}
+      </button>
       <span
         role="status"
         className={result?.ok ? styles.success : styles.actionError}
@@ -138,7 +141,7 @@ function ArtistPick({
         <Artwork
           key={image}
           url={image}
-          sizes="(max-width: 600px) 92vw, (max-width: 900px) 45vw, 400px"
+          sizes="(max-width: 600px) 28vw, 120px"
         />
       </Link>
       <div className={styles.pickText}>
@@ -347,79 +350,76 @@ export function Magazine() {
         </section>
 
         <section
-          className={styles.releases}
-          aria-labelledby="magazine-releases"
+          className={styles.discovery}
+          aria-labelledby="magazine-discovery"
         >
           <div className={styles.sectionHeading}>
-            <h2 id="magazine-releases">New releases</h2>
-            <Link href="/discover">All releases</Link>
+            <h2 id="magazine-discovery">Artists to discover</h2>
+            <Link href="/recommendations">All recommendations</Link>
           </div>
-          {releases.length > 0 ? (
-            <ul>
-              {releases.map((release) => (
-                <ReleaseRow
-                  key={release.id}
-                  release={release}
+          {data?.lidarrConfigured && (
+            <p className={styles.discoveryNote}>
+              Weekly discovery adds up to three artists to Lidarr and searches
+              their albums.
+            </p>
+          )}
+          {picks.length > 0 ? (
+            <div className={styles.picks}>
+              {picks.map((artist) => (
+                <ArtistPick
+                  key={artist.id}
+                  artist={artist}
                   lidarrConfigured={Boolean(data?.lidarrConfigured)}
                 />
               ))}
-            </ul>
+            </div>
           ) : (
             <p role="status">
               {failed
-                ? "Couldn’t load releases."
+                ? "Couldn’t load recommendations."
                 : data
-                  ? "No new releases in your feed."
-                  : "Loading releases…"}
+                  ? "Recommendations appear as Encore learns from your listening."
+                  : "Loading recommendations…"}
             </p>
-          )}
-          {upcoming && (
-            <>
-              <h3 className={styles.upcoming}>Coming soon</h3>
-              <ul>
-                <ReleaseRow
-                  key={upcoming.id}
-                  release={upcoming}
-                  lidarrConfigured={Boolean(data?.lidarrConfigured)}
-                />
-              </ul>
-            </>
           )}
         </section>
       </div>
 
-      <section
-        className={styles.discovery}
-        aria-labelledby="magazine-discovery"
-      >
+      <section className={styles.releases} aria-labelledby="magazine-releases">
         <div className={styles.sectionHeading}>
-          <h2 id="magazine-discovery">Artists to discover</h2>
-          <Link href="/recommendations">All recommendations</Link>
+          <h2 id="magazine-releases">New releases</h2>
+          <Link href="/discover">All releases</Link>
         </div>
-        {data?.lidarrConfigured && (
-          <p className={styles.discoveryNote}>
-            Weekly discovery adds up to three artists to Lidarr and searches
-            their albums.
-          </p>
-        )}
-        {picks.length > 0 ? (
-          <div className={styles.picks}>
-            {picks.map((artist) => (
-              <ArtistPick
-                key={artist.id}
-                artist={artist}
+        {releases.length > 0 ? (
+          <ul>
+            {releases.map((release) => (
+              <ReleaseRow
+                key={release.id}
+                release={release}
                 lidarrConfigured={Boolean(data?.lidarrConfigured)}
               />
             ))}
-          </div>
+          </ul>
         ) : (
           <p role="status">
             {failed
-              ? "Couldn’t load recommendations."
+              ? "Couldn’t load releases."
               : data
-                ? "Recommendations appear as Encore learns from your listening."
-                : "Loading recommendations…"}
+                ? "No new releases in your feed."
+                : "Loading releases…"}
           </p>
+        )}
+        {upcoming && (
+          <>
+            <h3 className={styles.upcoming}>Coming soon</h3>
+            <ul>
+              <ReleaseRow
+                key={upcoming.id}
+                release={upcoming}
+                lidarrConfigured={Boolean(data?.lidarrConfigured)}
+              />
+            </ul>
+          </>
         )}
       </section>
 
