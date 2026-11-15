@@ -62,7 +62,7 @@ export default async function ActivityPage() {
       "api/v1/queue?page=1&pageSize=50&includeUnknownArtistItems=true"
     ) as Promise<{ records: QueueItem[]; totalRecords: number }>,
     lidarrRequest(
-      "api/v1/history?page=1&pageSize=12&eventType=2&sortKey=date&sortDirection=descending"
+      "api/v1/history?page=1&pageSize=12&eventType=8&sortKey=date&sortDirection=descending"
     ) as Promise<{ records: Import[] }>,
     lidarrRequest("api/v1/command") as Promise<Command[]>,
     lidarrRequest("api/v1/artist") as Promise<
